@@ -4,44 +4,32 @@
 
 #include "./utils.c"
 
-typedef struct {
-    char** data;
-    int size;
-    int capacity;
-} Vector;
+VectorStr sourceCode;
+VectorPairIntStr errors;
 
-void initVector(Vector *vec) {
-    vec->size = 0;
-    vec->capacity = 4;
-    vec->data = malloc(sizeof(char*) *vec->capacity);
-}
-void addElement(Vector* vec, const char* str) {
-    if (vec->size >= vec->capacity) {
-        vec->capacity *= 2;
-        vec->data = realloc(vec->data, sizeof(char*) *vec->capacity);
-    }
-    vec->data[vec->size] = strdup(str);
-    vec->size++;
-}
-void freeVector(Vector* vec) {
-    int i;
-    for (i = 0; i < vec->size; i++) {
-        free(vec->data[i]);
-    }
-    free(vec->data);
-}
+/******************************
+    generate error messages    
+******************************/
+void raiseError(int lineNumber, char* message) {
+    char* lineStr = (char*) malloc(24);
+    char* errorMessage = (char*) malloc(256);
 
-const char* getElement(Vector* vec, int index) {
-    if (index >= 0 && index < vec->size) {
-        return vec->data[index];
-    }
-    return NULL;
+    lineStr[0] = '\0';
+    sprintf(lineStr, "%d", lineNumber);
+
+    errorMessage[0] = '\0';
+    strcat(errorMessage, "Line ");
+    strcat(errorMessage, lineStr);
+    strcat(errorMessage, " >>> ERROR: ");
+    strcat(errorMessage, message);
+
+    VectorPairIntStr_Push(&errors, lineNumber, errorMessage);
 }
 
 /***************************************
     formats source code line-by-line    
 ***************************************/
-char* trim(char* line, int size) {
+char* trim(char* line, int size, int lineNumber) {
     char* trimmedStr = (char*) malloc(size);
 
     int spaces = 0;
@@ -96,12 +84,11 @@ char* trim(char* line, int size) {
     }
 
     if (spaces > 2) {
-        printf("Invalid Syntax.\n");
+        raiseError(lineNumber, "incorrect spacing");
     }
+
     return trimmedStr;
 }
-
-Vector sourceCode;
 
 /****************************************************
     executes the first pass of the assembly cycle    
@@ -110,20 +97,22 @@ void executePass1(char* sourceFilePath) {
     FILE* sourceFile = fopen(sourceFilePath, "r");
 
     char* line = NULL;
+    int lineNumber = 0;
 
     if (sourceFile == NULL) {
         fprintf(stderr, "ASSEMBLER_ERROR: Could not open file \"%s\"\n", sourceFilePath);
         exit(-2);
-    } else {
-        printf("Sucessfully loaded \"%s\"\n", sourceFilePath);
     }
+    
+    printf("Sucessfully loaded \"%s\"\n", sourceFilePath);
 
-    initVector(&sourceCode);
+    VectorStr_Initialize(&sourceCode);
+    VectorPairIntStr_Initialize(&errors);
     
     while ((line = readLine(sourceFile)) != NULL) {
-        char* tmp = trim(line, strlen(line));
+        char* tmp = trim(line, strlen(line), ++ lineNumber);
         if (strlen(tmp) > 0) {
-            addElement(&sourceCode, tmp);
+            VectorStr_Push(&sourceCode, tmp);
         }
     }
 
@@ -140,12 +129,16 @@ int main(int argc, char* argv[]) {
 
     executePass1(argv[1]);
 
-    printf("%d\n", sourceCode.size);
     for (i = 0; i < sourceCode.size; i ++) {
-        printf("%s\n", getElement(&sourceCode, i));
+        printf("%s\n", VectorStr_Get(&sourceCode, i));
     }
 
-    freeVector(&sourceCode);
+    for (i = 0; (unsigned) i < errors.size; i ++) {
+        printf("\n%d %s\n", errors.data[i].first, errors.data[i].second);
+    }
+
+    VectorStr_Clear(&sourceCode);
+    VectorPairIntStr_Clear(&errors);
 
     return 0;
 }
