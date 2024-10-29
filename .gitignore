@@ -1,2 +1,4 @@
 *.exe
-hello.txt
+test1.asm
+headers/*
+.vscode
