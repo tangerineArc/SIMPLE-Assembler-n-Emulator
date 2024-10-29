@@ -6,6 +6,7 @@
 
 VectorStr sourceCode;
 VectorPairIntStr errors;
+MapStringToPairStrInt instructionSet;
 
 /******************************
     generate error messages    
@@ -90,6 +91,35 @@ char* trim(char* line, int size, int lineNumber) {
     return trimmedStr;
 }
 
+/**********************************************************
+    generates a map of pnemonic : (opcode, numOperands)    
+**********************************************************/
+void initializeInstructionSet() {
+    MapStringToPairStrInt_Initialize(&instructionSet);
+
+    MapStringToPairStrInt_Add(&instructionSet, "data", "", 1);
+    MapStringToPairStrInt_Add(&instructionSet, "ldc", "00", 1);
+    MapStringToPairStrInt_Add(&instructionSet, "adc", "01", 1);
+    MapStringToPairStrInt_Add(&instructionSet, "ldl", "02", 2);
+    MapStringToPairStrInt_Add(&instructionSet, "stl", "03", 2);
+    MapStringToPairStrInt_Add(&instructionSet, "ldnl", "04", 2);
+    MapStringToPairStrInt_Add(&instructionSet, "stnl", "05", 2);
+    MapStringToPairStrInt_Add(&instructionSet, "add", "06", 0);
+    MapStringToPairStrInt_Add(&instructionSet, "sub", "07", 0);
+    MapStringToPairStrInt_Add(&instructionSet, "shl", "08", 0);
+    MapStringToPairStrInt_Add(&instructionSet, "shr", "09", 0);
+    MapStringToPairStrInt_Add(&instructionSet, "adj", "0A", 1);
+    MapStringToPairStrInt_Add(&instructionSet, "a2sp", "0B", 0);
+    MapStringToPairStrInt_Add(&instructionSet, "sp2a", "0C", 0);
+    MapStringToPairStrInt_Add(&instructionSet, "call", "0D", 2);
+    MapStringToPairStrInt_Add(&instructionSet, "return", "0E", 0);
+    MapStringToPairStrInt_Add(&instructionSet, "brz", "0F", 2);
+    MapStringToPairStrInt_Add(&instructionSet, "brlz", "10", 2);
+    MapStringToPairStrInt_Add(&instructionSet, "br", "11", 2);
+    MapStringToPairStrInt_Add(&instructionSet, "HALT", "12", 0);
+    MapStringToPairStrInt_Add(&instructionSet, "SET", "", 1);
+}
+
 /****************************************************
     executes the first pass of the assembly cycle    
 ****************************************************/
@@ -117,10 +147,14 @@ void executePass1(char* sourceFilePath) {
     }
 
     fclose(sourceFile);
+
+    initializeInstructionSet();
 }
 
 int main(int argc, char* argv[]) {
     int i;
+
+    PairStrInt* res;
 
     if (argc != 2) {
         fprintf(stderr, "ASSEMBLER_ERROR: Usage: ./a <source-file-path>\n");
@@ -129,6 +163,7 @@ int main(int argc, char* argv[]) {
 
     executePass1(argv[1]);
 
+    /********** for testing **********/
     for (i = 0; i < sourceCode.size; i ++) {
         printf("%s\n", VectorStr_Get(&sourceCode, i));
     }
@@ -137,8 +172,17 @@ int main(int argc, char* argv[]) {
         printf("\n%d %s\n", errors.data[i].first, errors.data[i].second);
     }
 
+    res = MapStringToPairStrInt_Find(&instructionSet, "return");
+    if (res) {
+        printf("Found: %s %d\n", res->first, res->second);
+    } else {
+        printf("Not found\n");
+    }
+    /********** testing ends **********/
+
     VectorStr_Clear(&sourceCode);
     VectorPairIntStr_Clear(&errors);
+    MapStringToPairStrInt_Clear(&instructionSet);
 
     return 0;
 }

@@ -123,6 +123,14 @@ typedef struct {
     char* second;
 } PairIntStr;
 
+/**********************************************
+    data-structure for string-integer pairs    
+**********************************************/
+typedef struct {
+    char* first;
+    int second;
+} PairStrInt;
+
 /********************************************************
     data-structure for vector of integer-string pairs    
 ********************************************************/
@@ -163,4 +171,62 @@ void VectorPairIntStr_Clear(VectorPairIntStr* vector) {
     vector->data = NULL;
     vector->size = 0;
     vector->capacity = 0;
+}
+
+/****************************************************************
+    data-structure for map of strings to string-integer pairs    
+****************************************************************/
+typedef struct {
+    char* key;
+    PairStrInt value;
+} MapEntryStringToPairStrInt;
+
+typedef struct {
+    MapEntryStringToPairStrInt* data;
+    size_t size;
+    size_t capacity;
+} MapStringToPairStrInt;
+
+/***** allocates memory *****/
+void MapStringToPairStrInt_Initialize(MapStringToPairStrInt* map) {
+    map->size = 0;
+    map->capacity = 4;
+    map->data = malloc(sizeof(MapEntryStringToPairStrInt) * map->capacity);
+}
+
+/***** adds a string-integer pair entry for a given key to the map *****/
+void MapStringToPairStrInt_Add(MapStringToPairStrInt* map, const char* key, const char* first, int second) {
+    if (map->size == map->capacity) {
+        map->capacity *= 2;
+        map->data = realloc(map->data, map->capacity * sizeof(MapEntryStringToPairStrInt));
+    }
+    
+    map->data[map->size].key = strdup(key);
+    map->data[map->size].value.first = strdup(first);
+    map->data[map->size].value.second = second;
+    map->size ++;
+}
+
+/***** returns the string-integer pair corresponding to a given searchKey *****/
+PairStrInt* MapStringToPairStrInt_Find(MapStringToPairStrInt* map, const char* key) {
+    size_t i;
+    for (i = 0; i < map->size; i ++) {
+        if (strcmp(map->data[i].key, key) == 0) {
+            return &map->data[i].value;
+        }
+    }
+    return NULL;
+}
+
+/***** frees allocated memory *****/
+void MapStringToPairStrInt_Clear(MapStringToPairStrInt* map) {
+    size_t i;
+    for (i = 0; i < map->size; i ++) {
+        free(map->data[i].key);
+        free(map->data[i].value.first);
+    }
+    free(map->data);
+    map->data = NULL;
+    map->size = 0;
+    map->capacity = 0;
 }
