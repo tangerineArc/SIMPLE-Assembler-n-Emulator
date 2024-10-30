@@ -13,7 +13,7 @@ char* readLine(FILE* filePtr) {
     char* buffer = malloc(capacity);
 
     if (!buffer) {
-        fprintf(stderr, "ASSEMBLER_ERROR: Memory allocation error.\n");
+        fprintf(stderr, "ASSEMBLER_ERROR: could not allocate memory\n");
         return NULL;
     }
 
@@ -22,7 +22,7 @@ char* readLine(FILE* filePtr) {
             capacity *= 2;
             buffer = realloc(buffer, capacity);
             if (!buffer) {
-                fprintf(stderr, "ASSEMBLER_ERROR: Memory allocation error.\n");
+                fprintf(stderr, "ASSEMBLER_ERROR: could not allocate memory\n");
                 return NULL;
             }
         }
@@ -72,6 +72,18 @@ void strrev(char* str) {
     }
 }
 
+/**********************************
+    returns a slice of a string    
+**********************************/
+char* substr(const char* string, int start, int length) {
+    char* substring = malloc(length + 1);
+
+    strncpy(substring, string + start, length);
+    substring[length] = '\0';
+
+    return substring;
+}
+
 /*******************************************
     data-structure for vector of strings    
 *******************************************/
@@ -105,14 +117,6 @@ void VectorStr_Clear(VectorStr* vector) {
         free(vector->data[i]);
     }
     free(vector->data);
-}
-
-/***** get string at given index *****/
-const char* VectorStr_Get(VectorStr* vector, int index) {
-    if (index >= 0 && index < vector->size) {
-        return vector->data[index];
-    }
-    return NULL;
 }
 
 /**********************************************
@@ -179,26 +183,35 @@ void VectorPairIntStr_Clear(VectorPairIntStr* vector) {
 typedef struct {
     char* key;
     PairStrInt value;
-} MapEntryStringToPairStrInt;
+} _MapEntryStrToPairStrInt;
 
 typedef struct {
-    MapEntryStringToPairStrInt* data;
+    _MapEntryStrToPairStrInt* data;
     size_t size;
     size_t capacity;
-} MapStringToPairStrInt;
+} MapStrToPairStrInt;
 
 /***** allocates memory *****/
-void MapStringToPairStrInt_Initialize(MapStringToPairStrInt* map) {
+void MapStrToPairStrInt_Initialize(MapStrToPairStrInt* map) {
     map->size = 0;
     map->capacity = 4;
-    map->data = malloc(sizeof(MapEntryStringToPairStrInt) * map->capacity);
+    map->data = malloc(sizeof(_MapEntryStrToPairStrInt) * map->capacity);
 }
 
-/***** adds a string-integer pair entry for a given key to the map *****/
-void MapStringToPairStrInt_Add(MapStringToPairStrInt* map, const char* key, const char* first, int second) {
+/***** adds a string-integer pair entry for a given string key to the map *****/
+void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char* first, int second) {
+    size_t i;
+    for (i = 0; i < map->size; i ++) {
+        if (strcmp(map->data[i].key, key) == 0) {
+            map->data[i].value.first = strdup(first);
+            map->data[i].value.second = second;
+            return;
+        }
+    }
+
     if (map->size == map->capacity) {
         map->capacity *= 2;
-        map->data = realloc(map->data, map->capacity * sizeof(MapEntryStringToPairStrInt));
+        map->data = realloc(map->data, map->capacity * sizeof(_MapEntryStrToPairStrInt));
     }
     
     map->data[map->size].key = strdup(key);
@@ -208,7 +221,7 @@ void MapStringToPairStrInt_Add(MapStringToPairStrInt* map, const char* key, cons
 }
 
 /***** returns the string-integer pair corresponding to a given searchKey *****/
-PairStrInt* MapStringToPairStrInt_Find(MapStringToPairStrInt* map, const char* key) {
+PairStrInt* MapStrToPairStrInt_Find(MapStrToPairStrInt* map, const char* key) {
     size_t i;
     for (i = 0; i < map->size; i ++) {
         if (strcmp(map->data[i].key, key) == 0) {
@@ -219,11 +232,75 @@ PairStrInt* MapStringToPairStrInt_Find(MapStringToPairStrInt* map, const char* k
 }
 
 /***** frees allocated memory *****/
-void MapStringToPairStrInt_Clear(MapStringToPairStrInt* map) {
+void MapStrToPairStrInt_Clear(MapStrToPairStrInt* map) {
     size_t i;
     for (i = 0; i < map->size; i ++) {
         free(map->data[i].key);
         free(map->data[i].value.first);
+    }
+    free(map->data);
+    map->data = NULL;
+    map->size = 0;
+    map->capacity = 0;
+}
+
+/****************************************************
+    data-structure for map of strings to integers    
+****************************************************/
+typedef struct {
+    char* key;
+    int value;
+} _MapEntryStrToInt;
+
+typedef struct {
+    _MapEntryStrToInt* data;
+    size_t size;
+    size_t capacity;
+} MapStrToInt;
+
+/***** allocates memory *****/
+void MapStrToInt_Initialize(MapStrToInt* map) {
+    map->size = 0;
+    map->capacity = 4;
+    map->data = malloc(sizeof(_MapEntryStrToInt) * map->capacity);
+}
+
+/***** adds an integer entry for a given string key to the map *****/
+void MapStrToInt_Add(MapStrToInt* map, const char* key, int value) {
+    size_t i;
+    for (i = 0; i < map->size; i ++) {
+        if (strcmp(map->data[i].key, key) == 0) {
+            map->data[i].value = value;
+            return;
+        }
+    }
+
+    if (map->size == map->capacity) {
+        map->capacity *= 2;
+        map->data = realloc(map->data, map->capacity * sizeof(_MapEntryStrToInt));
+    }
+    
+    map->data[map->size].key = strdup(key);
+    map->data[map->size].value = value;
+    map->size ++;
+}
+
+/***** returns a pointer to the integer corresponding to a given searchKey *****/
+int* MapStrToInt_Find(MapStrToInt* map, const char* key) {
+    size_t i;
+    for (i = 0; i < map->size; i ++) {
+        if (strcmp(map->data[i].key, key) == 0) {
+            return &map->data[i].value;
+        }
+    }
+    return NULL;
+}
+
+/***** frees allocated memory *****/
+void MapStrToInt_Clear(MapStrToInt* map) {
+    size_t i;
+    for (i = 0; i < map->size; i ++) {
+        free(map->data[i].key);
     }
     free(map->data);
     map->data = NULL;

@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,7 +7,12 @@
 
 VectorStr sourceCode;
 VectorPairIntStr errors;
-MapStringToPairStrInt instructionSet;
+MapStrToPairStrInt instructionSet;
+MapStrToInt labels;
+
+/*
+ * TO-DO: FIX parseLabels FUNCTION 
+ */
 
 /******************************
     generate error messages    
@@ -91,33 +97,103 @@ char* trim(char* line, int size, int lineNumber) {
     return trimmedStr;
 }
 
-/**********************************************************
-    generates a map of pnemonic : (opcode, numOperands)    
-**********************************************************/
+/************************************************************
+    generates a map of {pnemonic : (opcode, numOperands)}    
+************************************************************/
 void initializeInstructionSet() {
-    MapStringToPairStrInt_Initialize(&instructionSet);
+    MapStrToPairStrInt_Initialize(&instructionSet);
 
-    MapStringToPairStrInt_Add(&instructionSet, "data", "", 1);
-    MapStringToPairStrInt_Add(&instructionSet, "ldc", "00", 1);
-    MapStringToPairStrInt_Add(&instructionSet, "adc", "01", 1);
-    MapStringToPairStrInt_Add(&instructionSet, "ldl", "02", 2);
-    MapStringToPairStrInt_Add(&instructionSet, "stl", "03", 2);
-    MapStringToPairStrInt_Add(&instructionSet, "ldnl", "04", 2);
-    MapStringToPairStrInt_Add(&instructionSet, "stnl", "05", 2);
-    MapStringToPairStrInt_Add(&instructionSet, "add", "06", 0);
-    MapStringToPairStrInt_Add(&instructionSet, "sub", "07", 0);
-    MapStringToPairStrInt_Add(&instructionSet, "shl", "08", 0);
-    MapStringToPairStrInt_Add(&instructionSet, "shr", "09", 0);
-    MapStringToPairStrInt_Add(&instructionSet, "adj", "0A", 1);
-    MapStringToPairStrInt_Add(&instructionSet, "a2sp", "0B", 0);
-    MapStringToPairStrInt_Add(&instructionSet, "sp2a", "0C", 0);
-    MapStringToPairStrInt_Add(&instructionSet, "call", "0D", 2);
-    MapStringToPairStrInt_Add(&instructionSet, "return", "0E", 0);
-    MapStringToPairStrInt_Add(&instructionSet, "brz", "0F", 2);
-    MapStringToPairStrInt_Add(&instructionSet, "brlz", "10", 2);
-    MapStringToPairStrInt_Add(&instructionSet, "br", "11", 2);
-    MapStringToPairStrInt_Add(&instructionSet, "HALT", "12", 0);
-    MapStringToPairStrInt_Add(&instructionSet, "SET", "", 1);
+    MapStrToPairStrInt_Add(&instructionSet, "data",     "", 1);
+    MapStrToPairStrInt_Add(&instructionSet, "ldc",    "00", 1);
+    MapStrToPairStrInt_Add(&instructionSet, "adc",    "01", 1);
+    MapStrToPairStrInt_Add(&instructionSet, "ldl",    "02", 2);
+    MapStrToPairStrInt_Add(&instructionSet, "stl",    "03", 2);
+    MapStrToPairStrInt_Add(&instructionSet, "ldnl",   "04", 2);
+    MapStrToPairStrInt_Add(&instructionSet, "stnl",   "05", 2);
+    MapStrToPairStrInt_Add(&instructionSet, "add",    "06", 0);
+    MapStrToPairStrInt_Add(&instructionSet, "sub",    "07", 0);
+    MapStrToPairStrInt_Add(&instructionSet, "shl",    "08", 0);
+    MapStrToPairStrInt_Add(&instructionSet, "shr",    "09", 0);
+    MapStrToPairStrInt_Add(&instructionSet, "adj",    "0A", 1);
+    MapStrToPairStrInt_Add(&instructionSet, "a2sp",   "0B", 0);
+    MapStrToPairStrInt_Add(&instructionSet, "sp2a",   "0C", 0);
+    MapStrToPairStrInt_Add(&instructionSet, "call",   "0D", 2);
+    MapStrToPairStrInt_Add(&instructionSet, "return", "0E", 0);
+    MapStrToPairStrInt_Add(&instructionSet, "brz",    "0F", 2);
+    MapStrToPairStrInt_Add(&instructionSet, "brlz",   "10", 2);
+    MapStrToPairStrInt_Add(&instructionSet, "br",     "11", 2);
+    MapStrToPairStrInt_Add(&instructionSet, "HALT",   "12", 0);
+    MapStrToPairStrInt_Add(&instructionSet, "SET",      "", 1);
+}
+
+/*********************************************
+    checks whether the label name is valid    
+*********************************************/
+bool checkLabelIdentifierValidity(char* label) {
+    unsigned int i;
+    for (i = 0; i < strlen(label); i ++) {
+        if ((label[i] >= 'a' && label[i] <= 'z') || (label[i] >= 'A' && label[i] <= 'Z') || (label[i] >= '0' && label[i] <= '9') || label[i] == '_') {
+            continue;
+        }
+        return false;
+    }
+    if ((label[0] >= 'a' && label[0] <= 'z') || (label[0] >= 'A' && label[0] <= 'Z') || label[0] == '_') {
+        return true;
+    }
+    return false;
+}
+
+/***********************************************************
+    generates a map of {labels : positon} of declaration    
+***********************************************************/
+void parseLabels() {
+    int i;
+
+    MapStrToInt_Initialize(&labels);
+
+    for (i = 0; i < sourceCode.size; i ++) {
+        char* label = (char*) malloc(strlen(sourceCode.data[i] + 1));
+
+        unsigned int j;
+
+        label[0] = '\0';
+        for (j = 0; (unsigned) j < strlen(sourceCode.data[i]); j ++) {
+            if (sourceCode.data[i][j] == ':') {
+                if (!checkLabelIdentifierValidity(label)) {
+                    raiseError(i + 1, "invalid label identifier");
+                    break;
+                }
+
+                if (MapStrToInt_Find(&labels, label)) {
+                    char* errorMessage = (char*) malloc(256);
+
+                    if (strlen(sourceCode.data[i]) > j + 4 && !strcmp(substr(sourceCode.data[i], j + 2, 3), "SET")) {
+                        continue;
+                    }
+
+                    if (strlen(sourceCode.data[i]) > j + 5 && !strcmp(substr(sourceCode.data[i], j + 2, 4), "data") && *MapStrToInt_Find(&labels, label) < 0) {
+                        MapStrToInt_Add(&labels, label, i);
+                        continue;
+                    }
+
+                    errorMessage[0] = '\0';
+                    strcat(errorMessage, "multiple declarations found for label: ");
+                    strcat(errorMessage, label);
+                    raiseError(i + 1, errorMessage);
+                    free(errorMessage);
+                }
+                
+                if (strlen(sourceCode.data[i]) > j + 4 && !strcmp(substr(sourceCode.data[i], j + 2, 3), "SET")) {
+                    int* tmp = MapStrToInt_Find(&labels, label);
+                    *tmp = -i;
+                    continue;
+                }
+                MapStrToInt_Add(&labels, label, i);
+                break;
+            }
+            strncat(label, &sourceCode.data[i][j], 1);
+        }
+    }
 }
 
 /****************************************************
@@ -130,7 +206,7 @@ void executePass1(char* sourceFilePath) {
     int lineNumber = 0;
 
     if (sourceFile == NULL) {
-        fprintf(stderr, "ASSEMBLER_ERROR: Could not open file \"%s\"\n", sourceFilePath);
+        fprintf(stderr, "ASSEMBLER_ERROR: could not open file \"%s\"\n", sourceFilePath);
         exit(-2);
     }
     
@@ -149,12 +225,17 @@ void executePass1(char* sourceFilePath) {
     fclose(sourceFile);
 
     initializeInstructionSet();
+
+    parseLabels();
 }
 
 int main(int argc, char* argv[]) {
+    /********** for testing **********/
     int i;
 
     PairStrInt* res;
+    int* lol;
+    /********** testing ends **********/
 
     if (argc != 2) {
         fprintf(stderr, "ASSEMBLER_ERROR: Usage: ./a <source-file-path>\n");
@@ -165,16 +246,23 @@ int main(int argc, char* argv[]) {
 
     /********** for testing **********/
     for (i = 0; i < sourceCode.size; i ++) {
-        printf("%s\n", VectorStr_Get(&sourceCode, i));
+        printf("%s\n", sourceCode.data[i]);
     }
 
     for (i = 0; (unsigned) i < errors.size; i ++) {
         printf("\n%d %s\n", errors.data[i].first, errors.data[i].second);
     }
 
-    res = MapStringToPairStrInt_Find(&instructionSet, "return");
+    res = MapStrToPairStrInt_Find(&instructionSet, "ldc");
     if (res) {
         printf("Found: %s %d\n", res->first, res->second);
+    } else {
+        printf("Not found\n");
+    }
+
+    lol = MapStrToInt_Find(&labels, "label");;
+    if (lol) {
+        printf("Found: %d\n", *lol);
     } else {
         printf("Not found\n");
     }
@@ -182,7 +270,8 @@ int main(int argc, char* argv[]) {
 
     VectorStr_Clear(&sourceCode);
     VectorPairIntStr_Clear(&errors);
-    MapStringToPairStrInt_Clear(&instructionSet);
+    MapStrToPairStrInt_Clear(&instructionSet);
+    MapStrToInt_Clear(&labels);
 
     return 0;
 }
