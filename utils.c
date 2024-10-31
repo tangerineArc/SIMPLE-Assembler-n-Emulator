@@ -106,6 +106,7 @@ void VectorStr_Push(VectorStr* vector, const char* string) {
         vector->capacity *= 2;
         vector->data = realloc(vector->data, sizeof(char*) * vector->capacity);
     }
+
     vector->data[vector->size] = strdup(string);
     vector->size ++;
 }
