@@ -9,6 +9,8 @@ VectorStr sourceCode;
 VectorPairIntStr errors;
 MapStrToPairStrInt instructionSet;
 MapStrToInt labels;
+VectorListingCustom data;
+VectorInt programCounter;
 
 /******************************
     generate error messages    
@@ -270,6 +272,44 @@ void translatePseudoInstructions() {
     sourceCode = realInstructionsSourceCode; /* FIX THIS LINE */
 }
 
+/**************************************************************
+    separates data segments from instructions in sourceCode    
+**************************************************************/
+void separateDataFromInstructions() {
+    VectorStr properlySeparatedSoureCode;
+    VectorStr dataSegments;
+
+    int i;
+
+    VectorStr_Initialize(&properlySeparatedSoureCode);
+    VectorStr_Initialize(&dataSegments);
+    for (i = 0; i < sourceCode.size; i ++) {
+        bool state = false;
+        unsigned int j;
+        for (j = 0; j < strlen(sourceCode.data[i]); j ++) {
+            if (!strcmp(substr(sourceCode.data[i], j, 4), "data") && j + 4 < strlen(sourceCode.data[i])) {
+                VectorStr_Push(&dataSegments, sourceCode.data[i]);
+                state = true;
+                break;
+            }
+
+            if (sourceCode.data[i][strlen(sourceCode.data[i]) - 1] == ':' && i + 1 < sourceCode.size && !strcmp(substr(sourceCode.data[i + 1], 0, 4), "data")) {
+                VectorStr_Push(&dataSegments, sourceCode.data[i]);
+                state = true;
+                break;
+            }
+        }
+        if (!state) {
+            VectorStr_Push(&properlySeparatedSoureCode, sourceCode.data[i]);
+        }
+    }
+
+    for (i = 0; i < dataSegments.size; i ++) {
+        VectorStr_Push(&properlySeparatedSoureCode, dataSegments.data[i]);
+    }
+    sourceCode = properlySeparatedSoureCode;
+}
+
 /****************************************************
     executes the first pass of the assembly cycle    
 ****************************************************/
@@ -302,6 +342,11 @@ void executePass1(char* sourceFilePath) {
     if (errors.size == 0) {
         translatePseudoInstructions();
     }
+
+    VectorListingCustom_Initialize(&data, sourceCode.size);
+    VectorInt_Initialize(&programCounter, sourceCode.size);
+
+    separateDataFromInstructions();
 }
 
 int main(int argc, char* argv[]) {
@@ -339,6 +384,8 @@ int main(int argc, char* argv[]) {
     VectorPairIntStr_Clear(&errors);
     MapStrToPairStrInt_Clear(&instructionSet);
     MapStrToInt_Clear(&labels);
+    VectorListingCustom_Clear(&data);
+    VectorInt_Clear(&programCounter);
 
     return 0;
 }

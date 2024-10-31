@@ -84,6 +84,27 @@ char* substr(const char* string, int start, int length) {
     return substring;
 }
 
+/********************************************
+    data-structure for vector of integers    
+********************************************/
+typedef struct {
+    int* data;
+    int size;
+    int capacity;
+} VectorInt;
+
+/***** allocates memory *****/
+void VectorInt_Initialize(VectorInt* vector, int initialCapacity) {
+    vector->size = 0;
+    vector->capacity = initialCapacity;
+    vector->data = malloc(sizeof(int) * vector->capacity);
+}
+
+/***** frees allocated memory *****/
+void VectorInt_Clear(VectorInt* vector) {
+    free(vector->data);
+}
+
 /*******************************************
     data-structure for vector of strings    
 *******************************************/
@@ -307,4 +328,60 @@ void MapStrToInt_Clear(MapStrToInt* map) {
     map->data = NULL;
     map->size = 0;
     map->capacity = 0;
+}
+
+/********************************************************************
+    data-structure for listing of 3 strings, 1 integer, 1 boolean    
+********************************************************************/
+typedef struct {
+    char* label;
+    char* mnemonic;
+    char* operand;
+    int operandType;
+    bool isLabelPresent;
+} ListingCustom;
+
+/***************************************************
+    data-structure for vector of custom listings    
+***************************************************/
+typedef struct {
+    ListingCustom* data;
+    int size;
+    int capacity;
+} VectorListingCustom;
+
+/***** allocates memory *****/
+void VectorListingCustom_Initialize(VectorListingCustom* vector, int initialCapacity) {
+    vector->size = 0;
+    vector->capacity = initialCapacity;
+    vector->data = malloc(sizeof(ListingCustom) * vector->capacity);
+}
+
+/***** pushes a ListingStrStrStrIntBool to the end *****/
+void VectorListingCustom_Push(VectorListingCustom* vector, const char* label, const char* mnemonic, const char* operand, int operandType, bool isLabelPresent) {
+    if (vector->size == vector->capacity) {
+        vector->capacity *= 2;
+        vector->data = realloc(vector->data, vector->capacity * sizeof(ListingCustom));
+    }
+    
+    vector->data[vector->size].label = strdup(label);
+    vector->data[vector->size].mnemonic = strdup(mnemonic);
+    vector->data[vector->size].operand = strdup(operand);
+    vector->data[vector->size].operandType = operandType;
+    vector->data[vector->size].isLabelPresent = isLabelPresent;
+    vector->size ++;
+}
+
+/***** frees allocated memory *****/
+void VectorListingCustom_Clear(VectorListingCustom* vector) {
+    int i;
+    for (i = 0; i < vector->size; i ++) {
+        free(vector->data[i].label);
+        free(vector->data[i].mnemonic);
+        free(vector->data[i].operand);
+    }
+    free(vector->data);
+    vector->data = NULL;
+    vector->size = 0;
+    vector->capacity = 0;
 }
