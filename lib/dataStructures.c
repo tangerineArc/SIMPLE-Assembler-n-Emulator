@@ -1,106 +1,13 @@
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-/**********************************************
-    reads a line from a file and returns it    
-**********************************************/
-char* readLine(FILE* filePtr) {
-    int ch;
-    size_t len = 0;
-    size_t capacity = 128;
+#include "../headers/dataStructures.h"
+#include "../headers/utils.h"
 
-    char* buffer = malloc(capacity);
-
-    if (!buffer) {
-        fprintf(stderr, "ASSEMBLER_ERROR: could not allocate memory\n");
-        return NULL;
-    }
-
-    while ((ch = fgetc(filePtr)) != EOF && ch != '\n') {
-        if (len + 1 >= capacity) {
-            capacity *= 2;
-            buffer = realloc(buffer, capacity);
-            if (!buffer) {
-                fprintf(stderr, "ASSEMBLER_ERROR: could not allocate memory\n");
-                return NULL;
-            }
-        }
-        buffer[len++] = ch;
-    }
-
-    if (ch == EOF && len == 0) {
-        free(buffer);
-        return NULL;
-    }
-
-    buffer[len] = '\0';
-    return buffer;
-}
-
-
-/*****************************************
-    duplicates a string and returns it    
-*****************************************/
-char *strdup(const char *str) {
-    size_t size = strlen(str) + 1;
-    char* p = malloc(size);
-    if (p) {
-        memcpy(p, str, size);
-    }
-    return p;
-}
-
-/*********************************
-    reverses a string in-place    
-*********************************/
-void strrev(char* str) {
-    int i = 0;
-    int j = strlen(str) - 1;
-
-    if (!str) {
-        return;
-    }
-    
-    while (i < j) {
-        char temp = str[i];
-        str[i] = str[j];
-        str[j] = temp;
-
-        i ++;
-        j --;
-    }
-}
-
-/**********************************
-    returns a slice of a string    
-**********************************/
-char* substr(const char* string, int start, int length) {
-    char* substring = malloc(length + 1);
-
-    strncpy(substring, string + start, length);
-    substring[length] = '\0';
-
-    return substring;
-}
-
-/******************************************
-    returns the minimum of two integers    
-******************************************/
-int minOf2Ints(int a, int b) {
-    if (a < b) return a;
-    return b;
-}
-
-/********************************************
-    data-structure for vector of integers    
-********************************************/
-typedef struct {
-    int* data;
-    int size;
-    int capacity;
-} VectorInt;
+/**************************************
+    utility functions for VectorInt    
+**************************************/
 
 /***** allocates memory *****/
 void VectorInt_Initialize(VectorInt* vector) {
@@ -155,14 +62,9 @@ void VectorInt_Clear(VectorInt* vector) {
     vector->capacity = 0;
 }
 
-/*******************************************
-    data-structure for vector of strings    
-*******************************************/
-typedef struct {
-    char** data;
-    int size;
-    int capacity;
-} VectorStr;
+/**************************************
+    utility functions for VectorStr    
+**************************************/
 
 /***** allocates memory *****/
 void VectorStr_Initialize(VectorStr* vector) {
@@ -235,30 +137,9 @@ void VectorStr_Clear(VectorStr* vector) {
     free(vector->data);
 }
 
-/**********************************************
-    data-structure for integer-string pairs    
-**********************************************/
-typedef struct {
-    int first;
-    char* second;
-} PairIntStr;
-
-/**********************************************
-    data-structure for string-integer pairs    
-**********************************************/
-typedef struct {
-    char* first;
-    int second;
-} PairStrInt;
-
-/********************************************************
-    data-structure for vector of integer-string pairs    
-********************************************************/
-typedef struct {
-    size_t size;
-    size_t capacity;
-    PairIntStr* data;
-} VectorPairIntStr;
+/*********************************************
+    utility functions for VectorPairIntStr    
+*********************************************/
 
 /***** allocates memory *****/
 void VectorPairIntStr_Initialize(VectorPairIntStr* vector) {
@@ -293,19 +174,9 @@ void VectorPairIntStr_Clear(VectorPairIntStr* vector) {
     vector->capacity = 0;
 }
 
-/****************************************************************
-    data-structure for map of strings to string-integer pairs    
-****************************************************************/
-typedef struct {
-    char* key;
-    PairStrInt value;
-} _MapEntryStrToPairStrInt;
-
-typedef struct {
-    _MapEntryStrToPairStrInt* data;
-    size_t size;
-    size_t capacity;
-} MapStrToPairStrInt;
+/***********************************************
+    utility functions for MapStrToPairStrInt    
+***********************************************/
 
 /***** allocates memory *****/
 void MapStrToPairStrInt_Initialize(MapStrToPairStrInt* map) {
@@ -368,19 +239,9 @@ void MapStrToPairStrInt_Clear(MapStrToPairStrInt* map) {
     map->capacity = 0;
 }
 
-/****************************************************
-    data-structure for map of strings to integers    
-****************************************************/
-typedef struct {
-    char* key;
-    int value;
-} _MapEntryStrToInt;
-
-typedef struct {
-    _MapEntryStrToInt* data;
-    size_t size;
-    size_t capacity;
-} MapStrToInt;
+/****************************************
+    utility functions for MapStrToInt    
+****************************************/
 
 /***** allocates memory *****/
 void MapStrToInt_Initialize(MapStrToInt* map) {
@@ -432,25 +293,9 @@ void MapStrToInt_Clear(MapStrToInt* map) {
     map->capacity = 0;
 }
 
-/********************************************************************
-    data-structure for listing of 3 strings, 1 integer, 1 boolean    
-********************************************************************/
-typedef struct {
-    char* label;
-    char* mnemonic;
-    char* operand;
-    int operandType;
-    bool isLabelPresent;
-} ListingCustom;
-
-/***************************************************
-    data-structure for vector of custom listings    
-***************************************************/
-typedef struct {
-    ListingCustom* data;
-    int size;
-    int capacity;
-} VectorListingCustom;
+/************************************************
+    utility functions for VectorListingCustom    
+************************************************/
 
 /***** allocates memory *****/
 void VectorListingCustom_Initialize(VectorListingCustom* vector) {
@@ -473,24 +318,15 @@ void VectorListingCustom_Resize(VectorListingCustom* vector, int newCapacity) {
 
     vector->data = (ListingCustom*) realloc(vector->data, sizeof(ListingCustom) * newCapacity);
 
-    for (i = vector->capacity; i < newCapacity; i ++) {
-        vector->data[i].label = (char*) malloc(256);
-        vector->data[i].mnemonic = (char*) malloc(256);
-        vector->data[i].operand = (char*) malloc(256);
-    }
-
     vector->capacity = newCapacity;
     vector->size = newCapacity;
-}
 
-/***** inserts a specific field at a specified index *****/
-typedef enum {
-    LABEL,
-    MNEMONIC,
-    OPERAND,
-    OPERAND_TYPE,
-    IS_LABEL_PRESENT
-} Field;
+    for (i = 0; i < vector->size; i ++) {
+        vector->data[i].label = (char*) realloc(vector->data[i].label, 256);
+        vector->data[i].mnemonic = (char*) realloc(vector->data[i].mnemonic, 256);
+        vector->data[i].operand = (char*) realloc(vector->data[i].operand, 256);
+    }
+}
 
 void VectorListingCustom_Insert(VectorListingCustom* vector, int index, Field field, const void* value) {
     ListingCustom* entry;

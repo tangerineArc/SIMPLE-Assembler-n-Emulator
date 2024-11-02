@@ -1,4 +1,3 @@
 assemble*
 test*.asm
-headers/*
 .vscode

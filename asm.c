@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "./utils.c"
+#include "./headers/dataStructures.h"
+#include "./headers/utils.h"
 
 VectorStr sourceCode;
 VectorPairIntStr errors;
