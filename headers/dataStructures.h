@@ -41,6 +41,8 @@ typedef struct {
     char* second;
 } PairIntStr;
 
+int PairIntStr_Compare(const void* a, const void* b); /***** comapres two PairIntStr's a and b; return a->first - b->first *****/
+
 /**********************************************
     data-structure for string-integer pairs    
 **********************************************/
@@ -59,6 +61,7 @@ typedef struct {
 } VectorPairIntStr;
 
 void VectorPairIntStr_Initialize(VectorPairIntStr* vector); /***** allocates memory *****/
+void VectorPairIntStr_Sort(VectorPairIntStr* vector); /***** sorts the vector as per the first item in the stored pairs *****/
 void VectorPairIntStr_Push(VectorPairIntStr* vector, int first, const char* second); /***** pushes an integer-string pair to the end *****/
 void VectorPairIntStr_Clear(VectorPairIntStr* vector); /***** frees allocated memory *****/
 

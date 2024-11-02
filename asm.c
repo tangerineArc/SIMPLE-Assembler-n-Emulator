@@ -18,20 +18,20 @@ bool isHaltPresent = false;
 /******************************
     generate error messages    
 ******************************/
-void raiseError(int lineNumber, char* message) {
+void raiseError(int lineNumber, const char* message) {
     char* lineStr = (char*) malloc(24);
     char* errorMessage = (char*) malloc(256);
 
     lineStr[0] = '\0';
-    sprintf(lineStr, "%d", lineNumber + 1);
+    sprintf(lineStr, "%d", lineNumber);
 
     errorMessage[0] = '\0';
-    strcat(errorMessage, "Line ");
+    strcat(errorMessage, "ERROR on line ");
     strcat(errorMessage, lineStr);
-    strcat(errorMessage, " >>> ERROR: ");
+    strcat(errorMessage, ": ");
     strcat(errorMessage, message);
 
-    VectorPairIntStr_Push(&errors, lineNumber, errorMessage);
+    VectorPairIntStr_Push(&errors, lineNumber + 1, errorMessage);
 }
 
 /***************************************
@@ -100,7 +100,7 @@ char* trim(char* line, int lineNumber) {
 /************************************************************
     generates a map of {pnemonic : (opcode, numOperands)}    
 ************************************************************/
-void initializeInstructionSet() {
+void initializeInstructionSet(void) {
     MapStrToPairStrInt_Initialize(&instructionSet);
 
     MapStrToPairStrInt_Add(&instructionSet, "data",     "", 1);
@@ -146,7 +146,7 @@ bool checkLabelIdentifierValidity(char* label) {
 /***********************************************************
     generates a map of {labels : positon} of declaration    
 ***********************************************************/
-void parseLabels() {
+void parseLabels(void) {
     int i;
 
     MapStrToInt_Initialize(&labels);
@@ -197,7 +197,7 @@ void parseLabels() {
 /***********************************************************************************************
     modifies sourceCode vector by translating pseudo-instructions (SET) to real-instructions    
 ***********************************************************************************************/
-void translatePseudoInstructions() {
+void translatePseudoInstructions(void) {
     VectorStr realInstructionsSourceCode;
 
     int i;
@@ -278,7 +278,7 @@ void translatePseudoInstructions() {
 /**************************************************************
     separates data segments from instructions in sourceCode    
 **************************************************************/
-void separateDataFromInstructions() {
+void separateDataFromInstructions(void) {
     VectorStr properlySeparatedSoureCode;
     VectorStr dataSegments;
 
@@ -393,7 +393,7 @@ int getOperandType(char* operand) {
 /*********************************************************************************************************
     parses the sourceCode and stores label, mnemonic, operand, operandType in VectorListingCustom data    
 *********************************************************************************************************/
-void tabulateSourceCode() {
+void tabulateSourceCode(void) {
     int PC = 0;
 
     int i;
@@ -505,11 +505,11 @@ void executePass1(char* sourceFilePath) {
     char* line = NULL;
 
     if (sourceFile == NULL) {
-        fprintf(stderr, "ASSEMBLER_ERROR: could not open file \"%s\"\n", sourceFilePath);
+        fprintf(stderr, "::: ASSEMBLER_ERROR: could not open file \"%s\"\n", sourceFilePath);
         exit(-2);
     }
     
-    printf("Sucessfully loaded \"%s\"\n", sourceFilePath);
+    printf("\n>>> loaded \"%s\"\n", sourceFilePath);
 
     VectorStr_Initialize(&sourceCode);
     VectorPairIntStr_Initialize(&errors);
@@ -540,17 +540,54 @@ void executePass1(char* sourceFilePath) {
     tabulateSourceCode();
 }
 
+/**************************************************************************
+    output the errors encountered; returns false if no errors else true    
+**************************************************************************/
+bool logAssemblyProcess(char* sourceFilePath) {
+    int i;
+
+    printf("\n-------------------- ASSEMBLER LOG STARTS --------------------\n\n");
+    
+    if (errors.size == 0) {
+        printf(">>> SUCCESS: assembly completed for \"%s\"\n", sourceFilePath);
+        if (!isHaltPresent) {
+            printf(">>> WARNING: HALT not present\n");
+        }
+        printf(">>> 0 errors encountered\n");
+        printf(">>> generated binary file \"machine-code.o\" in current directory\n");
+        printf(">>> generated listing file \"list-code.l\" in current directory\n");
+        
+        printf("\n--------------------- ASSEMBLER LOG ENDS ---------------------\n");
+
+        return false;
+    }
+
+    VectorPairIntStr_Sort(&errors);
+    printf(">>> %d errors encountered\n", errors.size);
+    for (i = 0; (unsigned) i < errors.size; i ++) {
+        printf("\t::: %s\n", errors.data[i].second);
+    }
+
+    printf("\n--------------------- ASSEMBLER LOG ENDS ---------------------\n");
+    
+    return true;
+}
+
 int main(int argc, char* argv[]) {
     /********** for testing **********/
     int i;
     /********** testing ends **********/
 
     if (argc != 2) {
-        fprintf(stderr, "ASSEMBLER_ERROR: Usage: ./a <source-file-path>\n");
+        fprintf(stderr, "::: ASSEMBLER_ERROR: Usage: ./assemble.exe <source-file-path>\n");
         exit(-1);
     }
 
     executePass1(argv[1]);
+
+    if (logAssemblyProcess(argv[1])) {
+        printf("Errors encountered\n");
+    } else printf("No errors encountered\n");
 
     /********** for testing **********/
     for (i = 0; i < sourceCode.size; i ++) {
@@ -564,10 +601,6 @@ int main(int argc, char* argv[]) {
     for (i = 0; i < programCounter.size; i ++) {
         printf("%d\n", programCounter.data[i]);
     }
-    /*
-    for (i = 0; (unsigned) i < errors.size; i ++) {
-        printf("\n%d %s\n", errors.data[i].first, errors.data[i].second);
-    }*/
     /********** testing ends **********/
 
     VectorStr_Clear(&sourceCode);

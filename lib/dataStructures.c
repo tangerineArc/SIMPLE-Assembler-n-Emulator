@@ -137,6 +137,17 @@ void VectorStr_Clear(VectorStr* vector) {
     free(vector->data);
 }
 
+/***************************************
+    utility functions for PairIntStr    
+***************************************/
+
+/***** comapres two PairIntStr's a and b; return a->first - b->first *****/
+int PairIntStr_Compare(const void* a, const void* b) {
+    PairIntStr* pairA = (PairIntStr*) a;
+    PairIntStr* pairB = (PairIntStr*) b;
+    return pairA->first - pairB->first;
+}
+
 /*********************************************
     utility functions for VectorPairIntStr    
 *********************************************/
@@ -159,6 +170,11 @@ void VectorPairIntStr_Push(VectorPairIntStr* vector, int first, const char* seco
     vector->data[vector->size].second = malloc(strlen(second) + 1);
     strcpy(vector->data[vector->size].second, second);
     vector->size ++;
+}
+
+/***** sorts the vector as per the first item in the stored pairs *****/
+void VectorPairIntStr_Sort(VectorPairIntStr* vector) {
+    qsort(vector->data, vector->size, sizeof(PairIntStr), PairIntStr_Compare);
 }
 
 /***** frees allocated memory *****/
@@ -332,7 +348,7 @@ void VectorListingCustom_Insert(VectorListingCustom* vector, int index, Field fi
     ListingCustom* entry;
 
     if (index < 0 || index >= vector->capacity) {
-        printf("Index out of bounds\n");
+        printf("INTERNAL_ERROR: index out of bounds\n");
         return;
     }
     
