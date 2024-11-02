@@ -9,8 +9,10 @@ VectorStr sourceCode;
 VectorPairIntStr errors;
 MapStrToPairStrInt instructionSet;
 MapStrToInt labels;
-VectorListingCustom data;
+VectorListingCustom sourceTable;
 VectorInt programCounter;
+
+bool isHaltPresent = false;
 
 /******************************
     generate error messages    
@@ -269,7 +271,7 @@ void translatePseudoInstructions() {
         free(token);
     }
 
-    sourceCode = realInstructionsSourceCode; /* FIX THIS LINE */
+    sourceCode = realInstructionsSourceCode;
 }
 
 /**************************************************************
@@ -310,6 +312,189 @@ void separateDataFromInstructions() {
     sourceCode = properlySeparatedSoureCode;
 }
 
+/***********************************************************
+    returns whether a string represents a decimal number    
+***********************************************************/
+bool isDecimal(char* s) {
+    bool verdict = true;
+    unsigned int i;
+    for (i = 0; i < strlen(s); i ++) {
+        verdict &= (s[i] >= '0' && s[i] <= '9');
+    }
+    return verdict;
+}
+
+/**********************************************************
+    returns whether a string represents an octal number    
+**********************************************************/
+bool isOctal(char* s) {
+    bool verdict = true;
+
+    unsigned int i;
+
+    if (strlen(s) < 3) {
+        return false;
+    }
+    
+    for (i = 2; i < strlen(s); i ++) {
+        verdict &= (s[i] >= '0' && s[i] <= '7');
+    }
+    return verdict & (s[0] == '0' && (s[1] == 'o' || s[1] == 'O'));
+}
+
+/***************************************************************
+    returns whether a string represents a hexadecimal number    
+***************************************************************/
+bool isHexadecimal(char* s) {
+    bool verdict = true;
+
+    unsigned int i;
+
+    if (strlen(s) < 3) {
+        return false;
+    }
+
+    for (i = 2; i < strlen(s); i ++) {
+        verdict &= ((s[i] >= '0' && s[i] <= '9') || (s[i] >= 'a' && s[i] <= 'f') || (s[i] >= 'A' && s[i] <= 'F'));
+    }
+    return verdict & (s[0] == '0' && (s[1] == 'x' || s[1] == 'X'));
+
+}
+
+/*********************************************************************************
+    returns whether the operand is a label / hex value / oct value / dec value    
+*********************************************************************************/
+int getOperandType(char* operand) {
+    if (strlen(operand) == 0) {
+        return 0;
+    }
+
+    if (operand[0] == '+' || operand[0] == '-') {
+        strrev(operand);
+        operand[strlen(operand) - 1] = '\0';
+        strrev(operand);
+    }
+
+    if (strlen(operand) == 0) {
+        return -1;
+    } else if (isDecimal(operand)) {
+        return 10;
+    } else if (isOctal(operand)) {
+        return 8;
+    } else if (isHexadecimal(operand)) {
+        return 16;
+    } else if (checkLabelIdentifierValidity(operand)) {
+        return 1;
+    }
+    return -1;
+}
+
+/*********************************************************************************************************
+    parses the sourceCode and stores label, mnemonic, operand, operandType in VectorListingCustom data    
+*********************************************************************************************************/
+void tabulateSourceCode() {
+    int PC = 0;
+
+    int i;
+    for (i = 0; i < sourceCode.size; i ++) {
+        VectorStr row;
+
+        char* curr = (char*) malloc(strlen(sourceCode.data[i]) * 2);
+
+        int ptr = 1;
+
+        unsigned int j;
+
+        int opType;
+
+        curr[0] = '\0';
+
+        VectorStr_Initialize(&row);
+        for (j = 0; j < 4; j ++) VectorStr_Push(&row, "");
+        VectorStr_Resize(&row, 10);
+
+        for (j = 0; j < strlen(sourceCode.data[i]); j ++) {
+            if (sourceCode.data[i][j] == ':') {
+                VectorStr_Insert(&row, 0, curr);
+                curr[0] = '\0';
+
+                j ++;
+                continue;
+            } else if (sourceCode.data[i][j] == ' ') {
+                VectorStr_Insert(&row, ptr ++, curr);
+                curr[0] = '\0';
+
+                continue;
+            }
+            strncat(curr, &sourceCode.data[i][j], 1);
+            if (j == strlen(sourceCode.data[i]) - 1) {
+                VectorStr_Insert(&row, ptr ++, curr);
+            }
+        }
+        
+        if (strlen(row.data[1]) != 0) {
+            bool tmp = true;
+            VectorListingCustom_Insert(&sourceTable, i, IS_LABEL_PRESENT, &tmp);
+        } else {
+            bool tmp = false;
+            VectorListingCustom_Insert(&sourceTable, i, IS_LABEL_PRESENT, &tmp);
+        }
+        
+        if (!strcmp(row.data[1], "HALT")) {
+            isHaltPresent = true;
+        }
+        
+        if (strlen(row.data[0]) != 0) {
+            MapStrToInt_Add(&labels, row.data[0], PC);
+        }
+        
+        VectorInt_Insert(&programCounter, i, PC);
+        
+        if (ptr == 1) {
+            int val = 0;
+            VectorListingCustom_Insert(&sourceTable, i, LABEL, row.data[0]);
+            VectorListingCustom_Insert(&sourceTable, i, MNEMONIC, "");
+            VectorListingCustom_Insert(&sourceTable, i, OPERAND, "");
+            VectorListingCustom_Insert(&sourceTable, i, OPERAND_TYPE, &val);
+            
+            VectorStr_Clear(&row);
+            free(curr);
+            continue;
+        }
+        PC ++;
+        
+        if (MapStrToPairStrInt_Find(&instructionSet, row.data[1]) == NULL) {
+            raiseError(i + 1, "invalid mnemonic");
+
+            VectorStr_Clear(&row);
+            free(curr);
+            continue;
+        }
+        
+        if (minOf2Ints(MapStrToPairStrInt_Find(&instructionSet, row.data[1])->second, 1) != ptr - 2) {
+            raiseError(i + 1, "invalid OPCode-syntax combination");
+
+            VectorStr_Clear(&row);
+            free(curr);
+            continue;
+        }
+        
+        VectorListingCustom_Insert(&sourceTable, i, LABEL, row.data[0]);    
+        VectorListingCustom_Insert(&sourceTable, i, MNEMONIC, row.data[1]);
+        VectorListingCustom_Insert(&sourceTable, i, OPERAND, row.data[2]);
+        opType = getOperandType(row.data[2]);
+        VectorListingCustom_Insert(&sourceTable, i, OPERAND_TYPE, &opType);
+        if (sourceTable.data[i].operandType == 1 && MapStrToInt_Find(&labels, sourceTable.data[i].operand) == NULL) {
+            raiseError(i + 1, "no such label");
+        } else if (sourceTable.data[i].operandType == -1) {
+            raiseError(i + 1, "invalid number");
+        }
+
+        free(curr);
+        VectorStr_Clear(&row);
+    }
+}
+
 /****************************************************
     executes the first pass of the assembly cycle    
 ****************************************************/
@@ -343,17 +528,20 @@ void executePass1(char* sourceFilePath) {
         translatePseudoInstructions();
     }
 
-    VectorListingCustom_Initialize(&data, sourceCode.size);
-    VectorInt_Initialize(&programCounter, sourceCode.size);
+    VectorListingCustom_Initialize(&sourceTable);
+    VectorListingCustom_Resize(&sourceTable, sourceCode.size);
+
+    VectorInt_Initialize(&programCounter);
+    VectorInt_Resize(&programCounter, sourceCode.size);
 
     separateDataFromInstructions();
+
+    tabulateSourceCode();
 }
 
 int main(int argc, char* argv[]) {
     /********** for testing **********/
     int i;
-
-    PairStrInt* res;
     /********** testing ends **********/
 
     if (argc != 2) {
@@ -367,24 +555,26 @@ int main(int argc, char* argv[]) {
     for (i = 0; i < sourceCode.size; i ++) {
         printf("%s\n", sourceCode.data[i]);
     }
+    printf("\n");
+    for (i = 0; i < sourceTable.size; i ++) {
+        printf("%s %s %s %d %d\n", sourceTable.data[i].label, sourceTable.data[i].mnemonic, sourceTable.data[i].operand, sourceTable.data[i].operandType, sourceTable.data[i].isLabelPresent);
+    }
+    printf("\n");
+    for (i = 0; i < programCounter.size; i ++) {
+        printf("%d\n", programCounter.data[i]);
+    }
     /*
     for (i = 0; (unsigned) i < errors.size; i ++) {
         printf("\n%d %s\n", errors.data[i].first, errors.data[i].second);
-    }
-
-    res = MapStrToPairStrInt_Find(&instructionSet, "ldc");
-    if (res) {
-        printf("Found: %s %d\n", res->first, res->second);
-    } else {
-        printf("Not found\n");
     }*/
     /********** testing ends **********/
 
     VectorStr_Clear(&sourceCode);
     VectorPairIntStr_Clear(&errors);
     MapStrToPairStrInt_Clear(&instructionSet);
+
     MapStrToInt_Clear(&labels);
-    VectorListingCustom_Clear(&data);
+    VectorListingCustom_Clear(&sourceTable);
     VectorInt_Clear(&programCounter);
 
     return 0;

@@ -1,5 +1,4 @@
-*.exe
+assemble*
 test*.asm
 headers/*
 .vscode
-assemble

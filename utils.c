@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -84,6 +85,14 @@ char* substr(const char* string, int start, int length) {
     return substring;
 }
 
+/******************************************
+    returns the minimum of two integers    
+******************************************/
+int minOf2Ints(int a, int b) {
+    if (a < b) return a;
+    return b;
+}
+
 /********************************************
     data-structure for vector of integers    
 ********************************************/
@@ -94,15 +103,56 @@ typedef struct {
 } VectorInt;
 
 /***** allocates memory *****/
-void VectorInt_Initialize(VectorInt* vector, int initialCapacity) {
+void VectorInt_Initialize(VectorInt* vector) {
     vector->size = 0;
-    vector->capacity = initialCapacity;
-    vector->data = malloc(sizeof(int) * vector->capacity);
+    vector->capacity = 4;
+    vector->data = (int*) malloc(sizeof(int) * vector->capacity);
+}
+
+/***** resizes the vector to a specified new capacity *****/
+void VectorInt_Resize(VectorInt* vector, int newCapacity) {
+    if (newCapacity < vector->size) {
+        vector->size = newCapacity;
+    }
+    
+    vector->data = (int*) realloc(vector->data, sizeof(int) * newCapacity);
+    
+    if (newCapacity > vector->capacity) {
+        int i;
+        for (i = vector->capacity; i < newCapacity; i ++) {
+            vector->data[i] = 0;
+        }
+    }
+    
+    vector->capacity = newCapacity;
+}
+
+/***** inserts a value at a specific index *****/
+void VectorInt_Insert(VectorInt* vector, int index, int value) {
+    int i;
+
+    if (index < 0 || index > vector->size) {
+        printf("INTERNAL_ERROR: index out of bounds");
+        return;
+    }
+
+    if (vector->size >= vector->capacity) {
+        VectorInt_Resize(vector, vector->capacity * 2);
+    }
+
+    for (i = vector->size; i > index; i --) {
+        vector->data[i] = vector->data[i - 1];
+    }
+
+    vector->data[index] = value;
+    vector->size ++;
 }
 
 /***** frees allocated memory *****/
 void VectorInt_Clear(VectorInt* vector) {
     free(vector->data);
+    vector->size = 0;
+    vector->capacity = 0;
 }
 
 /*******************************************
@@ -118,17 +168,61 @@ typedef struct {
 void VectorStr_Initialize(VectorStr* vector) {
     vector->size = 0;
     vector->capacity = 4;
-    vector->data = malloc(sizeof(char*) * vector->capacity);
+    vector->data = (char**) malloc(sizeof(char*) * vector->capacity);
 }
 
 /***** pushes a string to the end *****/
 void VectorStr_Push(VectorStr* vector, const char* string) {
     if (vector->size >= vector->capacity) {
         vector->capacity *= 2;
-        vector->data = realloc(vector->data, sizeof(char*) * vector->capacity);
+        vector->data = (char**) realloc(vector->data, sizeof(char*) * vector->capacity);
+    }
+    
+    vector->data[vector->size] = (char*) malloc(strlen(string) + 1);
+    vector->data[vector->size] = strdup(string);
+    vector->size ++;
+}
+
+/***** resizes the vector to a specified new capacity *****/
+void VectorStr_Resize(VectorStr* vector, int newCapacity) {
+    if (newCapacity < vector->size) {
+        int i;
+        for (i = newCapacity; i < vector->size; i ++) {
+            free(vector->data[i]);
+        }
+        vector->size = newCapacity;
     }
 
-    vector->data[vector->size] = strdup(string);
+    vector->data = (char**) realloc(vector->data, sizeof(char*) * newCapacity);
+    
+    if (newCapacity > vector->capacity) {
+        int i;
+        for (i = vector->capacity; i < newCapacity; i ++) {
+            vector->data[i] = NULL;
+        }
+    }
+
+    vector->capacity = newCapacity;
+}
+
+/***** inserts a string at a specific index *****/
+void VectorStr_Insert(VectorStr* vector, int index, const char* string) {
+    int i;
+
+    if (index < 0 || index > vector->size) {
+        printf("INTERNAL_ERROR: index out of bounds\n");
+        return;
+    }
+
+    if (vector->size >= vector->capacity) {
+        VectorStr_Resize(vector, vector->capacity * 2);
+    }
+
+    for (i = vector->size; i > index; i --) {
+        vector->data[i] = vector->data[i - 1];
+    }
+
+    vector->data[index] = strdup(string);
     vector->size ++;
 }
 
@@ -225,8 +319,11 @@ void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char
     size_t i;
     for (i = 0; i < map->size; i ++) {
         if (strcmp(map->data[i].key, key) == 0) {
+            map->data[i].value.first = (char*) malloc(strlen(first) + 1);
             map->data[i].value.first = strdup(first);
+
             map->data[i].value.second = second;
+
             return;
         }
     }
@@ -236,9 +333,14 @@ void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char
         map->data = realloc(map->data, map->capacity * sizeof(_MapEntryStrToPairStrInt));
     }
     
+    map->data[map->size].key = (char*) malloc(strlen(key) + 1);
     map->data[map->size].key = strdup(key);
+
+    map->data[map->size].value.first = (char*) malloc(strlen(first) + 1);
     map->data[map->size].value.first = strdup(first);
+
     map->data[map->size].value.second = second;
+
     map->size ++;
 }
 
@@ -351,25 +453,79 @@ typedef struct {
 } VectorListingCustom;
 
 /***** allocates memory *****/
-void VectorListingCustom_Initialize(VectorListingCustom* vector, int initialCapacity) {
+void VectorListingCustom_Initialize(VectorListingCustom* vector) {
+    int i;
+
     vector->size = 0;
-    vector->capacity = initialCapacity;
-    vector->data = malloc(sizeof(ListingCustom) * vector->capacity);
+    vector->capacity = 4;
+    vector->data = (ListingCustom*) malloc(sizeof(ListingCustom) * vector->capacity);
+
+    for (i = 0; i < vector->capacity; i ++) {
+        vector->data[i].label = (char*) malloc(256);
+        vector->data[i].mnemonic = (char*) malloc(256);
+        vector->data[i].operand = (char*) malloc(256);
+    }
 }
 
-/***** pushes a ListingStrStrStrIntBool to the end *****/
-void VectorListingCustom_Push(VectorListingCustom* vector, const char* label, const char* mnemonic, const char* operand, int operandType, bool isLabelPresent) {
-    if (vector->size == vector->capacity) {
-        vector->capacity *= 2;
-        vector->data = realloc(vector->data, vector->capacity * sizeof(ListingCustom));
+/***** resizes the vector to a specified new capacity *****/
+void VectorListingCustom_Resize(VectorListingCustom* vector, int newCapacity) {
+    int i;
+
+    vector->data = (ListingCustom*) realloc(vector->data, sizeof(ListingCustom) * newCapacity);
+
+    for (i = vector->capacity; i < newCapacity; i ++) {
+        vector->data[i].label = (char*) malloc(256);
+        vector->data[i].mnemonic = (char*) malloc(256);
+        vector->data[i].operand = (char*) malloc(256);
+    }
+
+    vector->capacity = newCapacity;
+    vector->size = newCapacity;
+}
+
+/***** inserts a specific field at a specified index *****/
+typedef enum {
+    LABEL,
+    MNEMONIC,
+    OPERAND,
+    OPERAND_TYPE,
+    IS_LABEL_PRESENT
+} Field;
+
+void VectorListingCustom_Insert(VectorListingCustom* vector, int index, Field field, const void* value) {
+    ListingCustom* entry;
+
+    if (index < 0 || index >= vector->capacity) {
+        printf("Index out of bounds\n");
+        return;
     }
     
-    vector->data[vector->size].label = strdup(label);
-    vector->data[vector->size].mnemonic = strdup(mnemonic);
-    vector->data[vector->size].operand = strdup(operand);
-    vector->data[vector->size].operandType = operandType;
-    vector->data[vector->size].isLabelPresent = isLabelPresent;
-    vector->size ++;
+    entry = &vector->data[index];
+    
+    switch (field) {
+        case LABEL:
+            entry->label = (char*) realloc(entry->label, strlen((char*) value) + 1);
+            entry->label = strdup((const char*) value);
+            break;
+
+        case MNEMONIC:
+            entry->mnemonic = (char*) realloc(entry->mnemonic, strlen((char*) value) + 1);
+            entry->mnemonic = strdup((const char*) value);
+            break;
+
+        case OPERAND:
+            entry->operand = (char*) realloc(entry->operand, strlen((char*) value) + 1);
+            entry->operand = strdup((const char*) value);
+            break;
+
+        case OPERAND_TYPE:
+            entry->operandType = *(const int*) value;
+            break;
+
+        case IS_LABEL_PRESENT:
+            entry->isLabelPresent = *(const bool*) value;
+            break;
+    }
 }
 
 /***** frees allocated memory *****/
