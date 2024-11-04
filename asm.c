@@ -8,12 +8,13 @@
 #include "./headers/utils.h"
 
 VectorStr* sourceCode; /* stores trimmed and formatted source-code */ /* DONE */
-VectorPairIntStr errors; /* stores errors as pairs of lineNumber & message */ /* DONE */
+VectorPairIntStr* errors; /* stores errors as pairs of lineNumber & message */ /* DONE */
 MapStrToPairStrInt* instructionSet; /* stores {mnemonic : (opcode, numOperands)} */ /* DONE */
 MapStrToInt* labels; /* stores {label : line of declaration} */ /* DONE */
 VectorListingCustom sourceTable; /* stores parts of source-code lines depending on category */ /* DONE */
 VectorInt programCounter; /* maintains the PC */ /* DONE */
-VectorPairIntStr machineCode; /* stores the machine-code */
+
+VectorPairIntStr* machineCode; /* stores the machine-code */
 
 bool isHaltPresent = false;
 
@@ -24,7 +25,7 @@ void raiseError(int lineNumber, const char* message) {
     char errorMessage[256];
     sprintf(errorMessage, "ERROR on line %d: %s", lineNumber, message);
 
-    VectorPairIntStr_Push(&errors, lineNumber + 1, errorMessage);
+    VectorPairIntStr_Push(errors, lineNumber + 1, errorMessage);
 }
 
 /***************************************
@@ -468,7 +469,7 @@ void executePass1(char* sourceFilePath) {
 
     sourceCode = VectorStr_Initialize();
     
-    VectorPairIntStr_Initialize(&errors);
+    errors = VectorPairIntStr_Initialize();
     
     while ((line = readLine(sourceFile)) != NULL) {
         char* trimmedLine = trim(line, sourceCode->size);
@@ -482,14 +483,14 @@ void executePass1(char* sourceFilePath) {
         fprintf(stderr, "\n::: ASSEMBLER_ERROR: could not close file \"%s\"\n\n", sourceFilePath);
         exit(-3);
     } else {
-        printf(">>> parsed \"%s\"\n\n", sourceFilePath);
+        printf(">>> parsed \"%s\"\n", sourceFilePath);
     }
 
     initializeInstructionSet();
     
     parseLabels();
 
-    if (errors.size == 0) {
+    if (errors->size == 0) {
         translatePseudoInstructions();
     }
 
@@ -512,7 +513,7 @@ bool logAssemblyProcess(char* sourceFilePath) {
 
     printf("\n-------------------- ASSEMBLER LOG STARTS --------------------\n\n");
     
-    if (errors.size == 0) {
+    if (errors->size == 0) {
         printf(">>> SUCCESS: assembly completed for \"%s\"\n", sourceFilePath);
         if (!isHaltPresent) {
             printf(">>> WARNING: HALT not present\n");
@@ -526,21 +527,74 @@ bool logAssemblyProcess(char* sourceFilePath) {
         return false;
     }
 
-    printf(">>> %ld errors encountered\n", errors.size);
+    printf(">>> FAILURE: assembly terminated for \"%s\"\n", sourceFilePath);
+    printf(">>> %ld errors encountered\n", errors->size);
 
-    VectorPairIntStr_Sort(&errors);
-    for (i = 0; (unsigned) i < errors.size; i ++) {
-        printf("\t::: %s\n", errors.data[i].second);
+    VectorPairIntStr_Sort(errors);
+    for (i = 0; (unsigned) i < errors->size; i ++) {
+        printf("\t::: %s\n", errors->data[i].second);
     }
 
-    printf("\n--------------------- ASSEMBLER LOG ENDS ---------------------\n");
+    printf("\n--------------------- ASSEMBLER LOG ENDS ---------------------\n\n");
     
     return true;
 }
 
+/*******************************************************
+    executes the second pass of the assembly process    
+*******************************************************/
+void executePass2(void) {
+    unsigned int i;
+
+    machineCode = VectorPairIntStr_Initialize();
+
+    for (i = 0; i < sourceTable.size; i ++) {
+        if (strlen(sourceCode->data[i]) == 0) {
+            continue;
+        }
+        
+        if (strlen(sourceTable.data[i].mnemonic) == 0) {
+            VectorPairIntStr_Push(machineCode, i, "        ");
+            continue;
+        }
+        
+        if (sourceTable.data[i].operandType == 1) {
+            char curr[33];
+            int* val = MapStrToInt_Find(labels, sourceTable.data[i].operand);
+            int decimalForm = *val;
+            if (MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->second == 2) {
+                decimalForm -= (programCounter.data[i] + 1);
+            }
+            
+            sprintf(curr, "%s%s", padWithZero(decimalToHex(decimalForm, 24), 6), MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->first);
+            VectorPairIntStr_Push(machineCode, i, curr);
+        } else if (sourceTable.data[i].operandType == 0) {
+            char curr[33];
+            sprintf(curr, "000000%s", MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->first);
+            VectorPairIntStr_Push(machineCode, i, curr);
+        } else {
+            char* end;
+
+            int decimalForm = strtol(sourceTable.data[i].operand, &end, sourceTable.data[i].operandType);
+
+            char curr[33];
+
+            int size = 6;
+            int add = 24;
+            if (!strcmp(sourceTable.data[i].mnemonic, "data")) {
+                size = 8;
+                add = 32;
+            }
+
+            sprintf(curr, "%s%s", padWithZero(decimalToHex(decimalForm, add), size), MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->first);
+            VectorPairIntStr_Push(machineCode, i, curr);
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     /********** for testing **********/
-    unsigned int i;
+    unsigned  i;
     /********** testing ends **********/
 
     if (argc != 2) {
@@ -569,19 +623,23 @@ int main(int argc, char* argv[]) {
     /********** testing ends **********/
 
     if (!logAssemblyProcess(argv[1])) {
-        /* executePass2(); */
-        printf("yay\n");
-    } else {
-        printf("oh no\n");
+        executePass2();
+
+        /********** for testing **********/
+        for (i = 0; i < machineCode->size; i ++) {
+            printf("%d %s\n", machineCode->data[i].first, machineCode->data[i].second);
+        }
+        /********** testing ends **********/
+
+        VectorPairIntStr_Clear(machineCode);
     }
 
     VectorStr_Clear(sourceCode);
-    VectorPairIntStr_Clear(&errors);
+    VectorPairIntStr_Clear(errors);
     MapStrToPairStrInt_Clear(instructionSet);
     MapStrToInt_Clear(labels);
     VectorListingCustom_Clear(&sourceTable);
     VectorInt_Clear(&programCounter);
-    /* VectorPairIntStr_Clear(&machineCode); */
 
     return 0;
 }

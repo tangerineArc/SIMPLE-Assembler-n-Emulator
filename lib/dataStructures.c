@@ -148,17 +148,22 @@ int PairIntStr_Compare(const void* a, const void* b) {
 *********************************************/
 
 /***** allocates memory *****/
-void VectorPairIntStr_Initialize(VectorPairIntStr* vector) {
+VectorPairIntStr* VectorPairIntStr_Initialize() {
     size_t initialCapacity = 4;
 
-    vector->data = (PairIntStr*) malloc(initialCapacity * sizeof(PairIntStr));
+    VectorPairIntStr* vector = malloc(sizeof(VectorPairIntStr));
+    vector->data = malloc(initialCapacity * sizeof(PairIntStr));
     vector->size = 0;
     vector->capacity = initialCapacity;
+
+    return vector;
 }
 
 void _VectorPairIntStr_Resize(VectorPairIntStr* vector) {
     size_t newCapacity = vector->capacity * 2;
-    vector->data = (PairIntStr*) realloc(vector->data, newCapacity * sizeof(PairIntStr));
+
+    PairIntStr* newData = realloc(vector->data, newCapacity * sizeof(PairIntStr));
+    vector->data = newData;
     vector->capacity = newCapacity;
 }
 
@@ -186,8 +191,7 @@ void VectorPairIntStr_Clear(VectorPairIntStr* vector) {
     }
 
     free(vector->data);
-    vector->size = 0;
-    vector->capacity = 0;
+    free(vector);
 }
 
 /***********************************************

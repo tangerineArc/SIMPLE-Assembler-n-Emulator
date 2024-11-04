@@ -60,7 +60,7 @@ typedef struct {
     size_t capacity;
 } VectorPairIntStr;
 
-void VectorPairIntStr_Initialize(VectorPairIntStr* vector); /* allocates memory */
+VectorPairIntStr* VectorPairIntStr_Initialize(void); /* allocates memory */
 void VectorPairIntStr_Push(VectorPairIntStr* vector, int first, const char* second); /* pushes an integer-string pair to the end */
 void VectorPairIntStr_Sort(VectorPairIntStr* vector); /* sorts the vector as per the first item in the stored pairs */
 void VectorPairIntStr_Clear(VectorPairIntStr* vector); /* frees allocated memory */
