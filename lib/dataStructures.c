@@ -198,7 +198,7 @@ void VectorPairIntStr_Clear(VectorPairIntStr* vector) {
 MapStrToPairStrInt* MapStrToPairStrInt_Initialize(void) {
     size_t initialCapacity = 4;
 
-    MapStrToPairStrInt* map = (MapStrToPairStrInt*) malloc(sizeof(map));
+    MapStrToPairStrInt* map = (MapStrToPairStrInt*) malloc(sizeof(MapStrToPairStrInt));
     if (!map) {
         fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"MapStrToPairStrInt* MapStrToPairStrInt_Initialize(void)\"\n");
         return NULL;
@@ -274,7 +274,9 @@ void MapStrToPairStrInt_Clear(MapStrToPairStrInt* map) {
         free(map->data[i].value.first);
     }
     free(map->data);
-    free(map);
+    map->data = NULL;
+    map->size = 0;
+    map->capacity = 0;
 }
 
 /****************************************
@@ -308,7 +310,9 @@ void MapStrToInt_Clear(MapStrToInt* map) {
         free(map->data[i].key);
     }
     free(map->data);
-    free(map);
+    map->data = NULL;
+    map->size = 0;
+    map->capacity = 0;
 }
 
 /***** adds an integer entry for a given string key to the map *****/
@@ -434,15 +438,12 @@ void VectorListingCustom_Insert(VectorListingCustom* vector, const void* fieldVa
 void VectorListingCustom_Clear(VectorListingCustom* vector) {
     size_t i;
     for (i = 0; i < vector->size; i ++) {
-        if ((&vector->data[i])->label) {
-            free((&vector->data[i])->label);
-        }
-        if ((&vector->data[i])->mnemonic) {
-            free((&vector->data[i])->mnemonic);
-        }
-        if ((&vector->data[i])->operand) {
-            free((&vector->data[i])->operand);
-        }
+        free(vector->data[i].label);
+        free(vector->data[i].mnemonic);
+        free(vector->data[i].operand);
     }
     free(vector->data);
+    vector->data = NULL;
+    vector->size = 0;
+    vector->capacity = 0;
 }

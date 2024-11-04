@@ -225,6 +225,7 @@ void translatePseudoInstructions(void) {
 
                 if (strlen(sourceCode->data[i]) > j + 5 && !strcmp(substr(sourceCode->data[i], j + 2, 3), "SET")) {
                     state = true;
+
                     if (abs(*MapStrToInt_Find(labels, token)) == i) {
                         char* info = (char*) malloc(256);
 
@@ -497,7 +498,7 @@ void executePass1(char* sourceFilePath) {
 
     VectorInt_Initialize(&programCounter);
     VectorInt_Resize(&programCounter, sourceCode->size);
-
+    
     separateDataFromInstructions();
     
     tabulateSourceCode();
