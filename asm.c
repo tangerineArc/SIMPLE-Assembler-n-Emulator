@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,12 +7,13 @@
 #include "./headers/dataStructures.h"
 #include "./headers/utils.h"
 
-VectorStr sourceCode;
-VectorPairIntStr errors;
-MapStrToPairStrInt instructionSet;
-MapStrToInt labels;
-VectorListingCustom sourceTable;
-VectorInt programCounter;
+VectorStr* sourceCode; /* stores trimmed and formatted source-code */ /* DONE */
+VectorPairIntStr errors; /* stores errors as pairs of lineNumber & message */ /* DONE */
+MapStrToPairStrInt* instructionSet; /* stores {mnemonic : (opcode, numOperands)} */ /* DONE */
+MapStrToInt* labels; /* stores {label : line of declaration} */ /* DONE */
+VectorListingCustom sourceTable; /* stores parts of source-code lines depending on category */ /* DONE */
+VectorInt programCounter; /* maintains the PC */ /* DONE */
+VectorPairIntStr machineCode; /* stores the machine-code */
 
 bool isHaltPresent = false;
 
@@ -19,17 +21,8 @@ bool isHaltPresent = false;
     generate error messages    
 ******************************/
 void raiseError(int lineNumber, const char* message) {
-    char* lineStr = (char*) malloc(24);
-    char* errorMessage = (char*) malloc(256);
-
-    lineStr[0] = '\0';
-    sprintf(lineStr, "%d", lineNumber);
-
-    errorMessage[0] = '\0';
-    strcat(errorMessage, "ERROR on line ");
-    strcat(errorMessage, lineStr);
-    strcat(errorMessage, ": ");
-    strcat(errorMessage, message);
+    char errorMessage[256];
+    sprintf(errorMessage, "ERROR on line %d: %s", lineNumber, message);
 
     VectorPairIntStr_Push(&errors, lineNumber + 1, errorMessage);
 }
@@ -37,54 +30,66 @@ void raiseError(int lineNumber, const char* message) {
 /***************************************
     formats source code line-by-line    
 ***************************************/
-char* trim(char* line, int lineNumber) {
-    char* trimmedStr = (char*) malloc(strlen(line));
+char* trim(const char* line, int lineNumber) {
+    size_t length = strlen(line);
+    char* trimmedStr = (char*) malloc(length + 1);
 
-    int spaces = 0;
+    char* start = (char*) line;
+    char* end = (char*) line + length - 1;
+
+    const char* p = NULL;
+
+    size_t idx = 0;
 
     size_t i;
 
-    for (i = 0; i < 2; i ++) {
-        strrev(line);
-        while (strlen(line) > 0 && (line[strlen(line) - 1] == ' ' || line[strlen(line) - 1] == '\t')) {
-            line[strlen(line) - 1] = '\0';
-        }
+    int spaces = 0;
+
+    if (!trimmedStr) {
+        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"char* trim(char* line, int lineNumber)\"");
+        exit(-4);
     }
 
-    trimmedStr[0] = '\0';
-    for (i = 0; i < strlen(line); i ++) {
-        int j = i;
+    while (end > start && (isspace((unsigned char) *end))) {
+        end --;
+    }
+    end ++;
 
-        if (line[i] == ';') {
+    while (start < end && (isspace((unsigned char) *start))) {
+        start ++;
+    }
+
+    for (p = start; p < end; p ++) {
+        if (*p == ';') {
             break;
         }
 
-        if (line[i] == ':') {
-            strcat(trimmedStr, ":");
-            if (i == strlen(line) - 1 || line[i + 1] != ' ') {
-                strcat(trimmedStr, " ");
+        if (*p == ':') {
+            trimmedStr[idx ++] = ':';
+            if (p + 1 < end && !isspace((unsigned char) *(p + 1))) {
+                trimmedStr[idx ++] = ' ';
             }
             continue;
         }
 
-        if (line[i] != ' ' && line[i] != '\t') {
-            strncat(trimmedStr, &line[i], 1);
+        if (!isspace((unsigned char) *p)) {
+            trimmedStr[idx ++] = *p;
             continue;
         }
 
-        strcat(trimmedStr, " ");
-
-        while (line[i] == line[j] && (size_t) j < strlen(line)) {
-            j ++;
+        trimmedStr[idx ++] = ' ';
+        while (p + 1 < end && isspace((unsigned char) *(p + 1))) {
+            p ++;
         }
-        i = j - 1;
     }
 
-    while (strlen(trimmedStr) > 0 && (trimmedStr[strlen(trimmedStr) - 1] == ' ' || trimmedStr[strlen(trimmedStr) - 1] == '\t')) {
-        trimmedStr[strlen(trimmedStr) - 1] = '\0';
+    while (idx > 0 && isspace((unsigned char) trimmedStr[idx - 1])) {
+        idx --;
     }
-    
-    for (i = 0; (unsigned) i < strlen(trimmedStr); i ++) {
+
+    trimmedStr[idx] = '\0';
+
+    for (i = 0; i < idx; i ++) {
         if (trimmedStr[i] == ' ') {
             spaces ++;
         }
@@ -93,37 +98,37 @@ char* trim(char* line, int lineNumber) {
     if (spaces > 2) {
         raiseError(lineNumber + 1, "incorrect spacing");
     }
-
+    
     return trimmedStr;
 }
 
 /************************************************************
-    generates a map of {pnemonic : (opcode, numOperands)}    
+    generates a map of {mnemonic : (opcode, numOperands)}    
 ************************************************************/
 void initializeInstructionSet(void) {
-    MapStrToPairStrInt_Initialize(&instructionSet);
+    instructionSet = MapStrToPairStrInt_Initialize();
 
-    MapStrToPairStrInt_Add(&instructionSet, "data",     "", 1);
-    MapStrToPairStrInt_Add(&instructionSet, "ldc",    "00", 1);
-    MapStrToPairStrInt_Add(&instructionSet, "adc",    "01", 1);
-    MapStrToPairStrInt_Add(&instructionSet, "ldl",    "02", 2);
-    MapStrToPairStrInt_Add(&instructionSet, "stl",    "03", 2);
-    MapStrToPairStrInt_Add(&instructionSet, "ldnl",   "04", 2);
-    MapStrToPairStrInt_Add(&instructionSet, "stnl",   "05", 2);
-    MapStrToPairStrInt_Add(&instructionSet, "add",    "06", 0);
-    MapStrToPairStrInt_Add(&instructionSet, "sub",    "07", 0);
-    MapStrToPairStrInt_Add(&instructionSet, "shl",    "08", 0);
-    MapStrToPairStrInt_Add(&instructionSet, "shr",    "09", 0);
-    MapStrToPairStrInt_Add(&instructionSet, "adj",    "0A", 1);
-    MapStrToPairStrInt_Add(&instructionSet, "a2sp",   "0B", 0);
-    MapStrToPairStrInt_Add(&instructionSet, "sp2a",   "0C", 0);
-    MapStrToPairStrInt_Add(&instructionSet, "call",   "0D", 2);
-    MapStrToPairStrInt_Add(&instructionSet, "return", "0E", 0);
-    MapStrToPairStrInt_Add(&instructionSet, "brz",    "0F", 2);
-    MapStrToPairStrInt_Add(&instructionSet, "brlz",   "10", 2);
-    MapStrToPairStrInt_Add(&instructionSet, "br",     "11", 2);
-    MapStrToPairStrInt_Add(&instructionSet, "HALT",   "12", 0);
-    MapStrToPairStrInt_Add(&instructionSet, "SET",      "", 1);
+    MapStrToPairStrInt_Add(instructionSet, "data",     "", 1);
+    MapStrToPairStrInt_Add(instructionSet, "ldc",    "00", 1);
+    MapStrToPairStrInt_Add(instructionSet, "adc",    "01", 1);
+    MapStrToPairStrInt_Add(instructionSet, "ldl",    "02", 2);
+    MapStrToPairStrInt_Add(instructionSet, "stl",    "03", 2);
+    MapStrToPairStrInt_Add(instructionSet, "ldnl",   "04", 2);
+    MapStrToPairStrInt_Add(instructionSet, "stnl",   "05", 2);
+    MapStrToPairStrInt_Add(instructionSet, "add",    "06", 0);
+    MapStrToPairStrInt_Add(instructionSet, "sub",    "07", 0);
+    MapStrToPairStrInt_Add(instructionSet, "shl",    "08", 0);
+    MapStrToPairStrInt_Add(instructionSet, "shr",    "09", 0);
+    MapStrToPairStrInt_Add(instructionSet, "adj",    "0A", 1);
+    MapStrToPairStrInt_Add(instructionSet, "a2sp",   "0B", 0);
+    MapStrToPairStrInt_Add(instructionSet, "sp2a",   "0C", 0);
+    MapStrToPairStrInt_Add(instructionSet, "call",   "0D", 2);
+    MapStrToPairStrInt_Add(instructionSet, "return", "0E", 0);
+    MapStrToPairStrInt_Add(instructionSet, "brz",    "0F", 2);
+    MapStrToPairStrInt_Add(instructionSet, "brlz",   "10", 2);
+    MapStrToPairStrInt_Add(instructionSet, "br",     "11", 2);
+    MapStrToPairStrInt_Add(instructionSet, "HALT",   "12", 0);
+    MapStrToPairStrInt_Add(instructionSet, "SET",      "", 1);
 }
 
 /*********************************************
@@ -149,47 +154,50 @@ bool checkLabelIdentifierValidity(char* label) {
 void parseLabels(void) {
     int i;
 
-    MapStrToInt_Initialize(&labels);
+    labels = MapStrToInt_Initialize();
 
-    for (i = 0; i < sourceCode.size; i ++) {
-        char* label = (char*) malloc(strlen(sourceCode.data[i]) + 1);
+    for (i = 0; i < sourceCode->size; i ++) {
+        const char* currentLine = sourceCode->data[i];
+
+        char label[100] = {0};
+        size_t idx = 0;
 
         unsigned int j;
-        label[0] = '\0';
-        for (j = 0; (unsigned) j < strlen(sourceCode.data[i]); j ++) {
-            if (sourceCode.data[i][j] == ':') {
+        for (j = 0; currentLine[j] != '\0'; j ++) {
+            if (currentLine[j] == ':') {
+                int* labelPos;
+
+                label[idx] = '\0';
+
                 if (!checkLabelIdentifierValidity(label)) {
                     raiseError(i + 1, "invalid label identifier");
                     break;
                 }
 
-                if (MapStrToInt_Find(&labels, label)) {
-                    char* errorMessage = (char*) malloc(256);
+                labelPos = MapStrToInt_Find(labels, label);
+                if (labelPos != NULL) {
+                    char* errorMessage = (char*) malloc(strlen("multiple declarations found for label: ") + strlen(label) + 1);
 
-                    if (strlen(sourceCode.data[i]) > j + 4 && !strcmp(substr(sourceCode.data[i], j + 2, 3), "SET")) {
+                    if (strlen(currentLine) > j + 4 && strncmp(currentLine + j + 2, "SET", 3) == 0) {
                         continue;
                     }
-
-                    if (strlen(sourceCode.data[i]) > j + 5 && !strcmp(substr(sourceCode.data[i], j + 2, 4), "data") && *MapStrToInt_Find(&labels, label) < 0) {
-                        MapStrToInt_Add(&labels, label, i);
+                    
+                    if (strlen(currentLine) > j + 5 && strncmp(currentLine + j + 2, "data", 4) == 0 && *labelPos < 0) {
+                        *labelPos = i;
+                        free(labelPos);
                         continue;
                     }
-
-                    errorMessage[0] = '\0';
-                    strcat(errorMessage, "multiple declarations found for label: ");
-                    strcat(errorMessage, label);
+                    
+                    sprintf(errorMessage, "multiple declarations found for label: %s", label);
                     raiseError(i + 1, errorMessage);
                     free(errorMessage);
+                } else {
+                    int labelValue = (j + 4 < strlen(currentLine) && strncmp(currentLine + j + 2, "SET", 3) == 0) ? -i : i;
+                    MapStrToInt_Add(labels, label, labelValue);
                 }
-                
-                if (strlen(sourceCode.data[i]) > j + 4 && !strcmp(substr(sourceCode.data[i], j + 2, 3), "SET")) {
-                    MapStrToInt_Add(&labels, label, -i);
-                    continue;
-                }
-                MapStrToInt_Add(&labels, label, i);
                 break;
             }
-            strncat(label, &sourceCode.data[i][j], 1);
+            label[idx ++] = currentLine[j];
         }
     }
 }
@@ -198,75 +206,67 @@ void parseLabels(void) {
     modifies sourceCode vector by translating pseudo-instructions (SET) to real-instructions    
 ***********************************************************************************************/
 void translatePseudoInstructions(void) {
-    VectorStr realInstructionsSourceCode;
+    VectorStr* realInstructionsSourceCode = VectorStr_Initialize();
 
     int i;
-    VectorStr_Initialize(&realInstructionsSourceCode);
-    for (i = 0; i < sourceCode.size; i ++) {
-        char* token = (char*) malloc(strlen(sourceCode.data[i]) + 1);
+    for (i = 0; i < sourceCode->size; i ++) {
+        char* token = (char*) malloc(strlen(sourceCode->data[i]) + 1);
         bool state = false;
 
         long unsigned int j;
         token[0] = '\0';
-        for (j = 0; j < strlen(sourceCode.data[i]); j ++) {
-            strncat(token, &sourceCode.data[i][j], 1);
+        for (j = 0; j < strlen(sourceCode->data[i]); j ++) {
+            strncat(token, &sourceCode->data[i][j], 1);
             
-            if (sourceCode.data[i][j] == ':') {
+            if (sourceCode->data[i][j] == ':') {
                 if (strlen(token) > 0) {
                     token[strlen(token) - 1] = '\0';
                 }
 
-                if (strlen(sourceCode.data[i]) > j + 5 && !strcmp(substr(sourceCode.data[i], j + 2, 3), "SET")) {
+                if (strlen(sourceCode->data[i]) > j + 5 && !strcmp(substr(sourceCode->data[i], j + 2, 3), "SET")) {
                     state = true;
-                    if (abs(*MapStrToInt_Find(&labels, token)) == i) {
+                    if (abs(*MapStrToInt_Find(labels, token)) == i) {
                         char* info = (char*) malloc(256);
-                        info[0] = '\0';
 
-                        MapStrToInt_Add(&labels, token, realInstructionsSourceCode.size - 1);
+                        MapStrToInt_Add(labels, token, realInstructionsSourceCode->size - 1);
 
-                        strcat(info, substr(sourceCode.data[i], 0, j + 1));
-                        strcat(info, " data ");
-                        strcat(info, substr(sourceCode.data[i], j + 6, strlen(sourceCode.data[i]) - (j + 6)));
-                        VectorStr_Push(&realInstructionsSourceCode, info);
+                        sprintf(info, "%s data %s", substr(sourceCode->data[i], 0, j + 1), substr(sourceCode->data[i], j + 6, strlen(sourceCode->data[i]) - (j + 6)));
+                        VectorStr_Push(realInstructionsSourceCode, info);
                         free(info);
                     } else {
                         char* _t1 = (char*) malloc(256);
                         char* _t2 = (char*) malloc(256);
 
-                        if (strlen(sourceCode.data[i]) <= j + 5) {
+                        if (strlen(sourceCode->data[i]) <= j + 5) {
                             free(_t1);
                             free(_t2);
                             break;
                         }
 
-                        VectorStr_Push(&realInstructionsSourceCode, "adj 10000");
-                        VectorStr_Push(&realInstructionsSourceCode, "stl -1");
-                        VectorStr_Push(&realInstructionsSourceCode, "stl 0");
+                        VectorStr_Push(realInstructionsSourceCode, "adj 10000");
+                        VectorStr_Push(realInstructionsSourceCode, "stl -1");
+                        VectorStr_Push(realInstructionsSourceCode, "stl 0");
                         
-                        _t1[0] = '\0';
-                        strcat(_t1, "ldc ");
-                        strcat(_t1, substr(sourceCode.data[i], j + 6, strlen(sourceCode.data[i]) - (j + 6)));
-                        VectorStr_Push(&realInstructionsSourceCode, _t1);
+                        sprintf(_t1, "ldc %s", substr(sourceCode->data[i], j + 6, strlen(sourceCode->data[i]) - (j + 6)));
+                        VectorStr_Push(realInstructionsSourceCode, _t1);
                         free(_t1);
 
-                        _t2[0] = '\0';
-                        strcat(_t2, "ldc ");
-                        strcat(_t2, substr(token, 0, j));
-                        VectorStr_Push(&realInstructionsSourceCode, _t2);
+                        sprintf(_t2, "ldc %s", substr(token, 0, j));
+                        VectorStr_Push(realInstructionsSourceCode, _t2);
                         free(_t2);
 
-                        VectorStr_Push(&realInstructionsSourceCode, "stnl 0");
-                        VectorStr_Push(&realInstructionsSourceCode, "ldl 0");
-                        VectorStr_Push(&realInstructionsSourceCode, "ldl -1");
-                        VectorStr_Push(&realInstructionsSourceCode, "adj -1000");
+                        VectorStr_Push(realInstructionsSourceCode, "stnl 0");
+                        VectorStr_Push(realInstructionsSourceCode, "ldl 0");
+                        VectorStr_Push(realInstructionsSourceCode, "ldl -1");
+                        VectorStr_Push(realInstructionsSourceCode, "adj -1000");
                     }
                     break;
                 }
             }
         }
 
-        if (!state && strlen(sourceCode.data[i]) != 0) {
-            VectorStr_Push(&realInstructionsSourceCode, sourceCode.data[i]);
+        if (!state && strlen(sourceCode->data[i]) != 0) {
+            VectorStr_Push(realInstructionsSourceCode, sourceCode->data[i]);
         }
 
         free(token);
@@ -279,87 +279,39 @@ void translatePseudoInstructions(void) {
     separates data segments from instructions in sourceCode    
 **************************************************************/
 void separateDataFromInstructions(void) {
-    VectorStr properlySeparatedSoureCode;
-    VectorStr dataSegments;
+    VectorStr* properlySeparatedSoureCode = VectorStr_Initialize();
+    VectorStr* dataSegments = VectorStr_Initialize();
 
     int i;
-
-    VectorStr_Initialize(&properlySeparatedSoureCode);
-    VectorStr_Initialize(&dataSegments);
-    for (i = 0; i < sourceCode.size; i ++) {
+    for (i = 0; i < sourceCode->size; i ++) {
         bool state = false;
+
+        unsigned int length = strlen(sourceCode->data[i]);
+
         unsigned int j;
-        for (j = 0; j < strlen(sourceCode.data[i]); j ++) {
-            if (!strcmp(substr(sourceCode.data[i], j, 4), "data") && j + 4 < strlen(sourceCode.data[i])) {
-                VectorStr_Push(&dataSegments, sourceCode.data[i]);
+        for (j = 0; j < length; j ++) {
+            if (!strcmp(substr(sourceCode->data[i], j, 4), "data") && j + 4 < length) {
+                VectorStr_Push(dataSegments, sourceCode->data[i]);
                 state = true;
                 break;
             }
-
-            if (sourceCode.data[i][strlen(sourceCode.data[i]) - 1] == ':' && i + 1 < sourceCode.size && !strcmp(substr(sourceCode.data[i + 1], 0, 4), "data")) {
-                VectorStr_Push(&dataSegments, sourceCode.data[i]);
+            if (sourceCode->data[i][length - 1] == ':' && i + 1 < sourceCode->size && !strcmp(substr(sourceCode->data[i + 1], 0, 4), "data")) {
+                VectorStr_Push(dataSegments, sourceCode->data[i]);
                 state = true;
                 break;
             }
         }
         if (!state) {
-            VectorStr_Push(&properlySeparatedSoureCode, sourceCode.data[i]);
+            VectorStr_Push(properlySeparatedSoureCode, sourceCode->data[i]);
         }
     }
 
-    for (i = 0; i < dataSegments.size; i ++) {
-        VectorStr_Push(&properlySeparatedSoureCode, dataSegments.data[i]);
+    for (i = 0; i < dataSegments->size; i ++) {
+        VectorStr_Push(properlySeparatedSoureCode, dataSegments->data[i]);
     }
+
     sourceCode = properlySeparatedSoureCode;
-}
-
-/***********************************************************
-    returns whether a string represents a decimal number    
-***********************************************************/
-bool isDecimal(char* s) {
-    bool verdict = true;
-    unsigned int i;
-    for (i = 0; i < strlen(s); i ++) {
-        verdict &= (s[i] >= '0' && s[i] <= '9');
-    }
-    return verdict;
-}
-
-/**********************************************************
-    returns whether a string represents an octal number    
-**********************************************************/
-bool isOctal(char* s) {
-    bool verdict = true;
-
-    unsigned int i;
-
-    if (strlen(s) < 3) {
-        return false;
-    }
-    
-    for (i = 2; i < strlen(s); i ++) {
-        verdict &= (s[i] >= '0' && s[i] <= '7');
-    }
-    return verdict & (s[0] == '0' && (s[1] == 'o' || s[1] == 'O'));
-}
-
-/***************************************************************
-    returns whether a string represents a hexadecimal number    
-***************************************************************/
-bool isHexadecimal(char* s) {
-    bool verdict = true;
-
-    unsigned int i;
-
-    if (strlen(s) < 3) {
-        return false;
-    }
-
-    for (i = 2; i < strlen(s); i ++) {
-        verdict &= ((s[i] >= '0' && s[i] <= '9') || (s[i] >= 'a' && s[i] <= 'f') || (s[i] >= 'A' && s[i] <= 'F'));
-    }
-    return verdict & (s[0] == '0' && (s[1] == 'x' || s[1] == 'X'));
-
+    VectorStr_Clear(dataSegments);
 }
 
 /*********************************************************************************
@@ -397,10 +349,12 @@ void tabulateSourceCode(void) {
     int PC = 0;
 
     int i;
-    for (i = 0; i < sourceCode.size; i ++) {
-        VectorStr row;
+    for (i = 0; i < sourceCode->size; i ++) {
+        VectorStr* row = VectorStr_Initialize();
 
-        char* curr = (char*) malloc(strlen(sourceCode.data[i]) * 2);
+        char* curr = (char*) malloc(256);
+
+        unsigned int length = strlen(sourceCode->data[i]);
 
         int ptr = 1;
 
@@ -410,116 +364,125 @@ void tabulateSourceCode(void) {
 
         curr[0] = '\0';
 
-        VectorStr_Initialize(&row);
-        for (j = 0; j < 4; j ++) VectorStr_Push(&row, "");
-        VectorStr_Resize(&row, 10);
+        VectorStr_Resize(row, 10);
 
-        for (j = 0; j < strlen(sourceCode.data[i]); j ++) {
-            if (sourceCode.data[i][j] == ':') {
-                VectorStr_Insert(&row, 0, curr);
+        for (j = 0; j < length; j ++) {
+            if (sourceCode->data[i][j] == ':') {
+                VectorStr_Insert(row, 0, curr);
                 curr[0] = '\0';
 
                 j ++;
                 continue;
-            } else if (sourceCode.data[i][j] == ' ') {
-                VectorStr_Insert(&row, ptr ++, curr);
+            } else if (sourceCode->data[i][j] == ' ') {
+                VectorStr_Insert(row, ptr ++, curr);
                 curr[0] = '\0';
 
                 continue;
             }
-            strncat(curr, &sourceCode.data[i][j], 1);
-            if (j == strlen(sourceCode.data[i]) - 1) {
-                VectorStr_Insert(&row, ptr ++, curr);
+
+            strncat(curr, &sourceCode->data[i][j], 1);
+            if (j == length - 1) {
+                VectorStr_Insert(row, ptr ++, curr);
             }
         }
         
-        if (strlen(row.data[1]) != 0) {
+        if (strlen(row->data[1]) != 0) {
             bool tmp = true;
-            VectorListingCustom_Insert(&sourceTable, i, IS_LABEL_PRESENT, &tmp);
+            VectorListingCustom_Insert(&sourceTable, &tmp, i, "isLabelPresent");
         } else {
             bool tmp = false;
-            VectorListingCustom_Insert(&sourceTable, i, IS_LABEL_PRESENT, &tmp);
+            VectorListingCustom_Insert(&sourceTable, &tmp, i, "isLabelPresent");
         }
         
-        if (!strcmp(row.data[1], "HALT")) {
+        if (!strcmp(row->data[1], "HALT")) {
             isHaltPresent = true;
         }
         
-        if (strlen(row.data[0]) != 0) {
-            MapStrToInt_Add(&labels, row.data[0], PC);
+        if (strlen(row->data[0]) != 0) {
+            MapStrToInt_Add(labels, row->data[0], PC);
         }
         
         VectorInt_Insert(&programCounter, i, PC);
-        
+    
         if (ptr == 1) {
             int val = 0;
-            VectorListingCustom_Insert(&sourceTable, i, LABEL, row.data[0]);
-            VectorListingCustom_Insert(&sourceTable, i, MNEMONIC, "");
-            VectorListingCustom_Insert(&sourceTable, i, OPERAND, "");
-            VectorListingCustom_Insert(&sourceTable, i, OPERAND_TYPE, &val);
-            
-            VectorStr_Clear(&row);
+            VectorListingCustom_Insert(&sourceTable, row->data[0], i, "label");
+            VectorListingCustom_Insert(&sourceTable, "", i, "mnemonic");
+            VectorListingCustom_Insert(&sourceTable, "", i, "operand");
+            VectorListingCustom_Insert(&sourceTable, &val, i, "operandType");
+            VectorStr_Clear(row);
             free(curr);
             continue;
         }
+        
         PC ++;
         
-        if (MapStrToPairStrInt_Find(&instructionSet, row.data[1]) == NULL) {
+        if (MapStrToPairStrInt_Find(instructionSet, row->data[1]) == NULL) {
             raiseError(i + 1, "invalid mnemonic");
 
-            VectorStr_Clear(&row);
+            VectorStr_Clear(row);
             free(curr);
             continue;
         }
         
-        if (minOf2Ints(MapStrToPairStrInt_Find(&instructionSet, row.data[1])->second, 1) != ptr - 2) {
+        if (minOf2Ints(MapStrToPairStrInt_Find(instructionSet, row->data[1])->second, 1) != ptr - 2) {
             raiseError(i + 1, "invalid OPCode-syntax combination");
 
-            VectorStr_Clear(&row);
+            VectorStr_Clear(row);
             free(curr);
             continue;
         }
         
-        VectorListingCustom_Insert(&sourceTable, i, LABEL, row.data[0]);    
-        VectorListingCustom_Insert(&sourceTable, i, MNEMONIC, row.data[1]);
-        VectorListingCustom_Insert(&sourceTable, i, OPERAND, row.data[2]);
-        opType = getOperandType(row.data[2]);
-        VectorListingCustom_Insert(&sourceTable, i, OPERAND_TYPE, &opType);
-        if (sourceTable.data[i].operandType == 1 && MapStrToInt_Find(&labels, sourceTable.data[i].operand) == NULL) {
+        VectorListingCustom_Insert(&sourceTable, row->data[0], i, "label");
+        VectorListingCustom_Insert(&sourceTable, row->data[1], i, "mnemonic");
+        VectorListingCustom_Insert(&sourceTable, row->data[2], i, "operand");
+        opType = getOperandType(row->data[2]);
+        VectorListingCustom_Insert(&sourceTable, &opType, i, "operandType");
+
+        if (sourceTable.data[i].operandType == 1 && MapStrToInt_Find(labels, sourceTable.data[i].operand) == NULL) {
             raiseError(i + 1, "no such label");
         } else if (sourceTable.data[i].operandType == -1) {
             raiseError(i + 1, "invalid number");
         }
 
         free(curr);
-        VectorStr_Clear(&row);
+        VectorStr_Clear(row);
     }
 }
 
-/****************************************************
-    executes the first pass of the assembly cycle    
-****************************************************/
+/******************************************************
+    executes the first pass of the assembly process    
+******************************************************/
 void executePass1(char* sourceFilePath) {
     FILE* sourceFile = fopen(sourceFilePath, "r");
 
     char* line = NULL;
 
     if (sourceFile == NULL) {
-        fprintf(stderr, "::: ASSEMBLER_ERROR: could not open file \"%s\"\n", sourceFilePath);
+        fprintf(stderr, "\n::: ASSEMBLER_ERROR: could not open file \"%s\"\n\n", sourceFilePath);
         exit(-2);
     }
     
     printf("\n>>> loaded \"%s\"\n", sourceFilePath);
 
-    VectorStr_Initialize(&sourceCode);
+    sourceCode = VectorStr_Initialize();
+    
     VectorPairIntStr_Initialize(&errors);
     
     while ((line = readLine(sourceFile)) != NULL) {
-        char* tmp = trim(line, sourceCode.size);
-        VectorStr_Push(&sourceCode, tmp);
+        char* trimmedLine = trim(line, sourceCode->size);
+        VectorStr_Push(sourceCode, trimmedLine);
+        
+        free(line);
+        free(trimmedLine);
     }
 
-    fclose(sourceFile);
+    if (fclose(sourceFile) != 0) {
+        fprintf(stderr, "\n::: ASSEMBLER_ERROR: could not close file \"%s\"\n\n", sourceFilePath);
+        exit(-3);
+    } else {
+        printf(">>> parsed \"%s\"\n\n", sourceFilePath);
+    }
 
     initializeInstructionSet();
     
@@ -530,13 +493,13 @@ void executePass1(char* sourceFilePath) {
     }
 
     VectorListingCustom_Initialize(&sourceTable);
-    VectorListingCustom_Resize(&sourceTable, sourceCode.size);
+    VectorListingCustom_Resize(&sourceTable, sourceCode->size);
 
     VectorInt_Initialize(&programCounter);
-    VectorInt_Resize(&programCounter, sourceCode.size);
+    VectorInt_Resize(&programCounter, sourceCode->size);
 
     separateDataFromInstructions();
-
+    
     tabulateSourceCode();
 }
 
@@ -554,16 +517,17 @@ bool logAssemblyProcess(char* sourceFilePath) {
             printf(">>> WARNING: HALT not present\n");
         }
         printf(">>> 0 errors encountered\n");
-        printf(">>> generated binary file \"machine-code.o\" in current directory\n");
-        printf(">>> generated listing file \"list-code.l\" in current directory\n");
+        printf(">>> generated binary file \"machine-code.out\" in current directory\n");
+        printf(">>> generated listing file \"list-code.list\" in current directory\n");
         
         printf("\n--------------------- ASSEMBLER LOG ENDS ---------------------\n");
 
         return false;
     }
 
+    printf(">>> %ld errors encountered\n", errors.size);
+
     VectorPairIntStr_Sort(&errors);
-    printf(">>> %d errors encountered\n", errors.size);
     for (i = 0; (unsigned) i < errors.size; i ++) {
         printf("\t::: %s\n", errors.data[i].second);
     }
@@ -575,41 +539,48 @@ bool logAssemblyProcess(char* sourceFilePath) {
 
 int main(int argc, char* argv[]) {
     /********** for testing **********/
-    int i;
+    unsigned int i;
     /********** testing ends **********/
 
     if (argc != 2) {
-        fprintf(stderr, "::: ASSEMBLER_ERROR: Usage: ./assemble.exe <source-file-path>\n");
+        fprintf(stderr, "\n::: ASSEMBLER_ERROR: Usage: ./assemble.exe <source-file-path>\n\n");
         exit(-1);
     }
 
     executePass1(argv[1]);
-
-    if (logAssemblyProcess(argv[1])) {
-        printf("Errors encountered\n");
-    } else printf("No errors encountered\n");
-
+    
     /********** for testing **********/
-    for (i = 0; i < sourceCode.size; i ++) {
-        printf("%s\n", sourceCode.data[i]);
+    /* for (i = 0; i < (unsigned) sourceCode->size; i ++) {
+        printf("%s\n", sourceCode->data[i]);
+    }
+    printf("\n");
+    for (i = 0; i < errors.size; i ++) {
+        printf("%d %s\n", errors.data[i].first, errors.data[i].second);
+    }
+    printf("\n");
+    for (i = 0; i < labels->size; i ++) {
+        printf("%s %d\n", labels->data[i].key, labels->data[i].value);
     }
     printf("\n");
     for (i = 0; i < sourceTable.size; i ++) {
         printf("%s %s %s %d %d\n", sourceTable.data[i].label, sourceTable.data[i].mnemonic, sourceTable.data[i].operand, sourceTable.data[i].operandType, sourceTable.data[i].isLabelPresent);
-    }
-    printf("\n");
-    for (i = 0; i < programCounter.size; i ++) {
-        printf("%d\n", programCounter.data[i]);
-    }
+    } */
     /********** testing ends **********/
 
-    VectorStr_Clear(&sourceCode);
-    VectorPairIntStr_Clear(&errors);
-    MapStrToPairStrInt_Clear(&instructionSet);
+    if (!logAssemblyProcess(argv[1])) {
+        /* executePass2(); */
+        printf("yay\n");
+    } else {
+        printf("oh no\n");
+    }
 
-    MapStrToInt_Clear(&labels);
+    VectorStr_Clear(sourceCode);
+    VectorPairIntStr_Clear(&errors);
+    MapStrToPairStrInt_Clear(instructionSet);
+    MapStrToInt_Clear(labels);
     VectorListingCustom_Clear(&sourceTable);
     VectorInt_Clear(&programCounter);
+    /* VectorPairIntStr_Clear(&machineCode); */
 
     return 0;
 }

@@ -11,53 +11,46 @@
 
 /***** allocates memory *****/
 void VectorInt_Initialize(VectorInt* vector) {
+    size_t initialCapacity = 4;
+
+    vector->data = (int*) malloc(sizeof(int) * initialCapacity);
     vector->size = 0;
-    vector->capacity = 4;
-    vector->data = (int*) malloc(sizeof(int) * vector->capacity);
+    vector->capacity = initialCapacity;
 }
 
 /***** resizes the vector to a specified new capacity *****/
-void VectorInt_Resize(VectorInt* vector, int newCapacity) {
-    if (newCapacity < vector->size) {
-        vector->size = newCapacity;
-    }
-    
-    vector->data = (int*) realloc(vector->data, sizeof(int) * newCapacity);
-    
-    if (newCapacity > vector->capacity) {
-        int i;
-        for (i = vector->capacity; i < newCapacity; i ++) {
-            vector->data[i] = 0;
+void VectorInt_Resize(VectorInt* vector, size_t newSize) {
+    size_t i;
+
+    if (newSize > vector->capacity) {
+        size_t newCapacity = (newSize > 2 * vector->capacity) ? newSize : 2 * vector->capacity;
+        int* newData = (int*) realloc(vector->data, newCapacity * sizeof(int));
+        if (!newData) {
+            printf("INTERNAL_ERROR: memory allocation failed in \"void VectorInt_Resize(VectorInt* vector, size_t newSize)\"\n");
+            return;
         }
+        vector->data = newData;
+        vector->capacity = newCapacity;
     }
-    
-    vector->capacity = newCapacity;
+
+    for (i = vector->size; i < newSize; ++ i) {
+        vector->data[i] = 0;
+    }
+    vector->size = newSize;
 }
 
 /***** inserts a value at a specific index *****/
-void VectorInt_Insert(VectorInt* vector, int index, int value) {
-    int i;
-
-    if (index < 0 || index > vector->size) {
-        printf("INTERNAL_ERROR: index out of bounds");
-        return;
+void VectorInt_Insert(VectorInt* vector, size_t index, int value) {
+    if (index >= vector->size) {
+        VectorInt_Resize(vector, index + 1);
     }
-
-    if (vector->size >= vector->capacity) {
-        VectorInt_Resize(vector, vector->capacity * 2);
-    }
-
-    for (i = vector->size; i > index; i --) {
-        vector->data[i] = vector->data[i - 1];
-    }
-
     vector->data[index] = value;
-    vector->size ++;
 }
 
 /***** frees allocated memory *****/
 void VectorInt_Clear(VectorInt* vector) {
     free(vector->data);
+    vector->data = NULL;
     vector->size = 0;
     vector->capacity = 0;
 }
@@ -67,65 +60,66 @@ void VectorInt_Clear(VectorInt* vector) {
 **************************************/
 
 /***** allocates memory *****/
-void VectorStr_Initialize(VectorStr* vector) {
+VectorStr* VectorStr_Initialize(void) {
+    int initialCapacity = 4;
+
+    VectorStr* vector = (VectorStr*) malloc(sizeof(VectorStr));
+    vector->data = (char**) malloc(initialCapacity * sizeof(char*));
     vector->size = 0;
-    vector->capacity = 4;
-    vector->data = (char**) malloc(sizeof(char*) * vector->capacity);
+    vector->capacity = initialCapacity;
+    return vector;
 }
 
 /***** pushes a string to the end *****/
 void VectorStr_Push(VectorStr* vector, const char* string) {
     if (vector->size >= vector->capacity) {
         vector->capacity *= 2;
-        vector->data = (char**) realloc(vector->data, sizeof(char*) * vector->capacity);
+        vector->data = (char**) realloc(vector->data, vector->capacity * sizeof(char*));
     }
     
-    vector->data[vector->size] = (char*) malloc(strlen(string) + 1);
     vector->data[vector->size] = strdup(string);
     vector->size ++;
 }
 
 /***** resizes the vector to a specified new capacity *****/
-void VectorStr_Resize(VectorStr* vector, int newCapacity) {
-    if (newCapacity < vector->size) {
+void VectorStr_Resize(VectorStr* vector, int newSize) {
+    int i;
+
+    if (newSize > vector->capacity) {
+        vector->capacity = newSize;
+        vector->data = (char**) realloc(vector->data, vector->capacity * sizeof(char*));
+    }
+
+    for (i = vector->size; i < newSize; i ++) {
+        vector->data[i] = strdup("");
+    }
+
+    if (newSize < vector->size) {
         int i;
-        for (i = newCapacity; i < vector->size; i ++) {
+        for (i = newSize; i < vector->size; i ++) {
             free(vector->data[i]);
         }
-        vector->size = newCapacity;
     }
 
-    vector->data = (char**) realloc(vector->data, sizeof(char*) * newCapacity);
-    
-    if (newCapacity > vector->capacity) {
-        int i;
-        for (i = vector->capacity; i < newCapacity; i ++) {
-            vector->data[i] = NULL;
-        }
-    }
-
-    vector->capacity = newCapacity;
+    vector->size = newSize;
 }
 
 /***** inserts a string at a specific index *****/
 void VectorStr_Insert(VectorStr* vector, int index, const char* string) {
-    int i;
-
     if (index < 0 || index > vector->size) {
-        printf("INTERNAL_ERROR: index out of bounds\n");
+        printf("INTERNAL_ERROR: index out of bounds in \"void VectorStr_Insert(VectorStr* vector, int index, const char* string)\"\n");
         return;
     }
 
-    if (vector->size >= vector->capacity) {
-        VectorStr_Resize(vector, vector->capacity * 2);
+    if (index >= vector->size) {
+        VectorStr_Resize(vector, index + 1);
     }
 
-    for (i = vector->size; i > index; i --) {
-        vector->data[i] = vector->data[i - 1];
+    if (vector->data[index] != NULL) {
+        free(vector->data[index]);
     }
 
     vector->data[index] = strdup(string);
-    vector->size ++;
 }
 
 /***** frees allocated memory *****/
@@ -135,6 +129,7 @@ void VectorStr_Clear(VectorStr* vector) {
         free(vector->data[i]);
     }
     free(vector->data);
+    free(vector);
 }
 
 /***************************************
@@ -154,21 +149,27 @@ int PairIntStr_Compare(const void* a, const void* b) {
 
 /***** allocates memory *****/
 void VectorPairIntStr_Initialize(VectorPairIntStr* vector) {
+    size_t initialCapacity = 4;
+
+    vector->data = (PairIntStr*) malloc(initialCapacity * sizeof(PairIntStr));
     vector->size = 0;
-    vector->capacity = 4;
-    vector->data = malloc(sizeof(PairIntStr) * vector->capacity);
+    vector->capacity = initialCapacity;
+}
+
+void _VectorPairIntStr_Resize(VectorPairIntStr* vector) {
+    size_t newCapacity = vector->capacity * 2;
+    vector->data = (PairIntStr*) realloc(vector->data, newCapacity * sizeof(PairIntStr));
+    vector->capacity = newCapacity;
 }
 
 /***** pushes an integer-string pair to the end *****/
 void VectorPairIntStr_Push(VectorPairIntStr* vector, int first, const char* second) {
-    if (vector->size == vector->capacity) {
-        vector->capacity *= 2;
-        vector->data = realloc(vector->data, vector->capacity * sizeof(PairIntStr));
+    if (vector->size >= vector->capacity) {
+        _VectorPairIntStr_Resize(vector);
     }
     
     vector->data[vector->size].first = first;
-    vector->data[vector->size].second = malloc(strlen(second) + 1);
-    strcpy(vector->data[vector->size].second, second);
+    vector->data[vector->size].second = strdup(second);
     vector->size ++;
 }
 
@@ -183,9 +184,8 @@ void VectorPairIntStr_Clear(VectorPairIntStr* vector) {
     for (i = 0; i < vector->size; i ++) {
         free(vector->data[i].second);
     }
-    free(vector->data);
 
-    vector->data = NULL;
+    free(vector->data);
     vector->size = 0;
     vector->capacity = 0;
 }
@@ -195,38 +195,62 @@ void VectorPairIntStr_Clear(VectorPairIntStr* vector) {
 ***********************************************/
 
 /***** allocates memory *****/
-void MapStrToPairStrInt_Initialize(MapStrToPairStrInt* map) {
+MapStrToPairStrInt* MapStrToPairStrInt_Initialize(void) {
+    size_t initialCapacity = 4;
+
+    MapStrToPairStrInt* map = (MapStrToPairStrInt*) malloc(sizeof(map));
+    if (!map) {
+        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"MapStrToPairStrInt* MapStrToPairStrInt_Initialize(void)\"\n");
+        return NULL;
+    }
+
+    map->data = (_MapEntryStrToPairStrInt*) calloc(initialCapacity, sizeof(_MapEntryStrToPairStrInt));
+    if (!map->data) {
+        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"MapStrToPairStrInt* MapStrToPairStrInt_Initialize(void)\"\n");
+        free(map);
+        return NULL;
+    }
+
+    map->capacity = initialCapacity;
     map->size = 0;
-    map->capacity = 4;
-    map->data = malloc(sizeof(_MapEntryStrToPairStrInt) * map->capacity);
+    return map;
 }
 
 /***** adds a string-integer pair entry for a given string key to the map *****/
 void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char* first, int second) {
     size_t i;
+
+    if (map->size >= map->capacity) {
+        size_t newCapacity = map->capacity * 2;
+        _MapEntryStrToPairStrInt* newEntries = (_MapEntryStrToPairStrInt*) realloc(map->data, newCapacity * sizeof(_MapEntryStrToPairStrInt));
+        if (!newEntries) {
+            fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char* first, int second)\"\n");
+            return;
+        }
+
+        map->data = newEntries;
+        map->capacity = newCapacity;
+    }
+
     for (i = 0; i < map->size; i ++) {
         if (strcmp(map->data[i].key, key) == 0) {
-            map->data[i].value.first = (char*) malloc(strlen(first) + 1);
+            free(map->data[i].value.first);
             map->data[i].value.first = strdup(first);
-
             map->data[i].value.second = second;
-
             return;
         }
     }
-
-    if (map->size == map->capacity) {
-        map->capacity *= 2;
-        map->data = realloc(map->data, map->capacity * sizeof(_MapEntryStrToPairStrInt));
-    }
     
-    map->data[map->size].key = (char*) malloc(strlen(key) + 1);
     map->data[map->size].key = strdup(key);
-
-    map->data[map->size].value.first = (char*) malloc(strlen(first) + 1);
     map->data[map->size].value.first = strdup(first);
-
     map->data[map->size].value.second = second;
+
+    if (!map->data[map->size].key || !map->data[map->size].value.first) {
+        free(map->data[map->size].key);
+        free(map->data[map->size].value.first);
+        fprintf(stderr, "::: INTERNAL_ERROR: value assignment failed in \"void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char* first, int second)\"\n");
+        return;
+    }
 
     map->size ++;
 }
@@ -250,9 +274,7 @@ void MapStrToPairStrInt_Clear(MapStrToPairStrInt* map) {
         free(map->data[i].value.first);
     }
     free(map->data);
-    map->data = NULL;
-    map->size = 0;
-    map->capacity = 0;
+    free(map);
 }
 
 /****************************************
@@ -260,28 +282,64 @@ void MapStrToPairStrInt_Clear(MapStrToPairStrInt* map) {
 ****************************************/
 
 /***** allocates memory *****/
-void MapStrToInt_Initialize(MapStrToInt* map) {
+MapStrToInt* MapStrToInt_Initialize(void) {
+    size_t initialCapacity = 4;
+
+    MapStrToInt* map = (MapStrToInt*) malloc(sizeof(MapStrToInt));
+    if (!map) {
+        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"MapStrToInt* MapStrToInt_Initialize(void)\"\n");
+        return NULL;
+    }
+    map->data = (_MapEntryStrToInt*) malloc(initialCapacity * sizeof(_MapEntryStrToInt));
+    if (!map->data) {
+        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"MapStrToInt* MapStrToInt_Initialize(void)\"\n");
+        free(map);
+        return NULL;
+    }
     map->size = 0;
-    map->capacity = 4;
-    map->data = malloc(sizeof(_MapEntryStrToInt) * map->capacity);
+    map->capacity = initialCapacity;
+    return map;
+}
+
+/***** frees allocated memory *****/
+void MapStrToInt_Clear(MapStrToInt* map) {
+    size_t i;
+    for (i = 0; i < map->size; i ++) {
+        free(map->data[i].key);
+    }
+    free(map->data);
+    free(map);
 }
 
 /***** adds an integer entry for a given string key to the map *****/
 void MapStrToInt_Add(MapStrToInt* map, const char* key, int value) {
     size_t i;
+
+    if (map->size >= map->capacity) {
+        size_t newCapacity = map->capacity * 2;
+        _MapEntryStrToInt* newData = (_MapEntryStrToInt*) realloc(map->data, newCapacity * sizeof(_MapEntryStrToInt));
+        if (!newData) {
+            fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"void MapStrToInt_Add(MapStrToInt* map, const char* key, int value)\"\n");
+            MapStrToInt_Clear(map);
+            return;
+        }
+        map->data = newData;
+        map->capacity = newCapacity;
+    }
+
     for (i = 0; i < map->size; i ++) {
         if (strcmp(map->data[i].key, key) == 0) {
             map->data[i].value = value;
             return;
         }
     }
-
-    if (map->size == map->capacity) {
-        map->capacity *= 2;
-        map->data = realloc(map->data, map->capacity * sizeof(_MapEntryStrToInt));
-    }
     
     map->data[map->size].key = strdup(key);
+    if (!map->data[map->size].key) {
+        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"void MapStrToInt_Add(MapStrToInt* map, const char* key, int value)\"\n");
+        MapStrToInt_Clear(map);
+        return;
+    }
     map->data[map->size].value = value;
     map->size ++;
 }
@@ -297,99 +355,94 @@ int* MapStrToInt_Find(MapStrToInt* map, const char* key) {
     return NULL;
 }
 
-/***** frees allocated memory *****/
-void MapStrToInt_Clear(MapStrToInt* map) {
-    size_t i;
-    for (i = 0; i < map->size; i ++) {
-        free(map->data[i].key);
-    }
-    free(map->data);
-    map->data = NULL;
-    map->size = 0;
-    map->capacity = 0;
-}
-
 /************************************************
     utility functions for VectorListingCustom    
 ************************************************/
 
 /***** allocates memory *****/
 void VectorListingCustom_Initialize(VectorListingCustom* vector) {
-    int i;
-
+    size_t initialCapacity = 4;
+    
+    size_t i;
+    
     vector->size = 0;
-    vector->capacity = 4;
-    vector->data = (ListingCustom*) malloc(sizeof(ListingCustom) * vector->capacity);
+    vector->capacity = initialCapacity;
+    vector->data = (ListingCustom*) malloc(sizeof(ListingCustom) * initialCapacity);
 
     for (i = 0; i < vector->capacity; i ++) {
-        vector->data[i].label = (char*) malloc(256);
-        vector->data[i].mnemonic = (char*) malloc(256);
-        vector->data[i].operand = (char*) malloc(256);
+        vector->data[i].label = strdup("");
+        vector->data[i].mnemonic = strdup("");
+        vector->data[i].operand = strdup("");
     }
 }
 
 /***** resizes the vector to a specified new capacity *****/
-void VectorListingCustom_Resize(VectorListingCustom* vector, int newCapacity) {
-    int i;
+void VectorListingCustom_Resize(VectorListingCustom* vector, size_t newCapacity) {
+    size_t i;
 
-    vector->data = (ListingCustom*) realloc(vector->data, sizeof(ListingCustom) * newCapacity);
+    ListingCustom* newData;
 
-    vector->capacity = newCapacity;
-    vector->size = newCapacity;
-
-    for (i = 0; i < vector->size; i ++) {
-        vector->data[i].label = (char*) realloc(vector->data[i].label, 256);
-        vector->data[i].mnemonic = (char*) realloc(vector->data[i].mnemonic, 256);
-        vector->data[i].operand = (char*) realloc(vector->data[i].operand, 256);
-    }
-}
-
-void VectorListingCustom_Insert(VectorListingCustom* vector, int index, Field field, const void* value) {
-    ListingCustom* entry;
-
-    if (index < 0 || index >= vector->capacity) {
-        printf("INTERNAL_ERROR: index out of bounds\n");
+    if (newCapacity <= vector->capacity) {
         return;
     }
+
+    newData = (ListingCustom*) realloc(vector->data, sizeof(ListingCustom) * newCapacity);
+
+    for (i = vector->capacity; i < newCapacity; i ++) {
+        newData[i].label = strdup("");
+        newData[i].mnemonic = strdup("");
+        newData[i].operand = strdup("");
+    }
+
+    vector->data = newData;
+    vector->capacity = newCapacity;
+}
+
+void VectorListingCustom_Insert(VectorListingCustom* vector, const void* fieldValue, size_t index, const char* fieldName) {
+    ListingCustom* entry = &vector->data[index];
     
-    entry = &vector->data[index];
+    if (index >= vector->size) {
+        vector->size = index + 1;
+        if (vector->size > vector->capacity) {
+            VectorListingCustom_Resize(vector, vector->capacity * 2);
+        }
+    }
     
-    switch (field) {
-        case LABEL:
-            entry->label = (char*) realloc(entry->label, strlen((char*) value) + 1);
-            entry->label = strdup((const char*) value);
-            break;
-
-        case MNEMONIC:
-            entry->mnemonic = (char*) realloc(entry->mnemonic, strlen((char*) value) + 1);
-            entry->mnemonic = strdup((const char*) value);
-            break;
-
-        case OPERAND:
-            entry->operand = (char*) realloc(entry->operand, strlen((char*) value) + 1);
-            entry->operand = strdup((const char*) value);
-            break;
-
-        case OPERAND_TYPE:
-            entry->operandType = *(const int*) value;
-            break;
-
-        case IS_LABEL_PRESENT:
-            entry->isLabelPresent = *(const bool*) value;
-            break;
+    if (strcmp(fieldName, "label") == 0) {
+        if (!strcmp(entry->label, "")) {
+            free(entry->label);
+        }
+        entry->label = strdup((char*) fieldValue);
+    } else if (strcmp(fieldName, "mnemonic") == 0) {
+        if (!strcmp(entry->mnemonic, "")) {
+            free(entry->mnemonic);
+        }
+        entry->mnemonic = strdup((char*) fieldValue);
+    } else if (strcmp(fieldName, "operand") == 0) {
+        if (!strcmp(entry->operand, "")) {
+            free(entry->operand);
+        }
+        entry->operand = strdup((char*) fieldValue);
+    } else if (strcmp(fieldName, "operandType") == 0) {
+        entry->operandType = *(int*) fieldValue;
+    } else if (strcmp(fieldName, "isLabelPresent") == 0) {
+        entry->isLabelPresent = *(bool*) fieldValue;
     }
 }
 
 /***** frees allocated memory *****/
 void VectorListingCustom_Clear(VectorListingCustom* vector) {
-    int i;
+    size_t i;
     for (i = 0; i < vector->size; i ++) {
-        free(vector->data[i].label);
-        free(vector->data[i].mnemonic);
-        free(vector->data[i].operand);
+        if ((&vector->data[i])->label) {
+            free((&vector->data[i])->label);
+        }
+        if ((&vector->data[i])->mnemonic) {
+            free((&vector->data[i])->mnemonic);
+        }
+        if ((&vector->data[i])->operand) {
+            free((&vector->data[i])->operand);
+        }
     }
     free(vector->data);
-    vector->data = NULL;
-    vector->size = 0;
-    vector->capacity = 0;
 }

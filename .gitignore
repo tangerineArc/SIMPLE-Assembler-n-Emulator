@@ -1,3 +1,4 @@
 assemble*
 test*.asm
 .vscode
+*.o
