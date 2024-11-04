@@ -1,4 +1,6 @@
-assemble*
-test*.asm
+*.exe
+*.asm
 .vscode
 *.o
+*.lst
+*.out

@@ -7,13 +7,12 @@
 #include "./headers/dataStructures.h"
 #include "./headers/utils.h"
 
-VectorStr* sourceCode; /* stores trimmed and formatted source-code */ /* DONE */
-VectorPairIntStr* errors; /* stores errors as pairs of lineNumber & message */ /* DONE */
-MapStrToPairStrInt* instructionSet; /* stores {mnemonic : (opcode, numOperands)} */ /* DONE */
-MapStrToInt* labels; /* stores {label : line of declaration} */ /* DONE */
-VectorListingCustom sourceTable; /* stores parts of source-code lines depending on category */ /* DONE */
-VectorInt programCounter; /* maintains the PC */ /* DONE */
-
+VectorStr* sourceCode; /* stores trimmed and formatted source-code */
+VectorPairIntStr* errors; /* stores errors as pairs of lineNumber & message */
+MapStrToPairStrInt* instructionSet; /* stores {mnemonic : (opcode, numOperands)} */
+MapStrToInt* labels; /* stores {label : line of declaration} */
+VectorListingCustom sourceTable; /* stores parts of source-code lines depending on category */
+VectorInt programCounter; /* maintains the PC */
 VectorPairIntStr* machineCode; /* stores the machine-code */
 
 bool isHaltPresent = false;
@@ -46,30 +45,17 @@ char* trim(const char* line, int lineNumber) {
 
     int spaces = 0;
 
-    if (!trimmedStr) {
-        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"char* trim(char* line, int lineNumber)\"");
-        exit(-4);
-    }
-
-    while (end > start && (isspace((unsigned char) *end))) {
-        end --;
-    }
+    while (end > start && (isspace((unsigned char) *end))) end --;
     end ++;
-
-    while (start < end && (isspace((unsigned char) *start))) {
-        start ++;
-    }
+    while (start < end && (isspace((unsigned char) *start))) start ++;
 
     for (p = start; p < end; p ++) {
-        if (*p == ';') {
-            break;
-        }
+        if (*p == ';') break;
 
         if (*p == ':') {
             trimmedStr[idx ++] = ':';
-            if (p + 1 < end && !isspace((unsigned char) *(p + 1))) {
-                trimmedStr[idx ++] = ' ';
-            }
+            if (p + 1 < end && !isspace((unsigned char) *(p + 1))) trimmedStr[idx ++] = ' ';
+
             continue;
         }
 
@@ -79,26 +65,16 @@ char* trim(const char* line, int lineNumber) {
         }
 
         trimmedStr[idx ++] = ' ';
-        while (p + 1 < end && isspace((unsigned char) *(p + 1))) {
-            p ++;
-        }
+        while (p + 1 < end && isspace((unsigned char) *(p + 1))) p ++;
     }
 
-    while (idx > 0 && isspace((unsigned char) trimmedStr[idx - 1])) {
-        idx --;
-    }
+    while (idx > 0 && isspace((unsigned char) trimmedStr[idx - 1])) idx --;
 
     trimmedStr[idx] = '\0';
 
-    for (i = 0; i < idx; i ++) {
-        if (trimmedStr[i] == ' ') {
-            spaces ++;
-        }
-    }
+    for (i = 0; i < idx; i ++) if (trimmedStr[i] == ' ') spaces ++;
 
-    if (spaces > 2) {
-        raiseError(lineNumber + 1, "incorrect spacing");
-    }
+    if (spaces > 2) raiseError(lineNumber + 1, "incorrect spacing");
     
     return trimmedStr;
 }
@@ -138,14 +114,12 @@ void initializeInstructionSet(void) {
 bool checkLabelIdentifierValidity(char* label) {
     unsigned int i;
     for (i = 0; i < strlen(label); i ++) {
-        if ((label[i] >= 'a' && label[i] <= 'z') || (label[i] >= 'A' && label[i] <= 'Z') || (label[i] >= '0' && label[i] <= '9') || label[i] == '_') {
-            continue;
-        }
+        if ((label[i] >= 'a' && label[i] <= 'z') || (label[i] >= 'A' && label[i] <= 'Z') || (label[i] >= '0' && label[i] <= '9') || label[i] == '_') continue;
+
         return false;
     }
-    if ((label[0] >= 'a' && label[0] <= 'z') || (label[0] >= 'A' && label[0] <= 'Z') || label[0] == '_') {
-        return true;
-    }
+    if ((label[0] >= 'a' && label[0] <= 'z') || (label[0] >= 'A' && label[0] <= 'Z') || label[0] == '_') return true;
+
     return false;
 }
 
@@ -179,9 +153,7 @@ void parseLabels(void) {
                 if (labelPos != NULL) {
                     char* errorMessage = (char*) malloc(strlen("multiple declarations found for label: ") + strlen(label) + 1);
 
-                    if (strlen(currentLine) > j + 4 && strncmp(currentLine + j + 2, "SET", 3) == 0) {
-                        continue;
-                    }
+                    if (strlen(currentLine) > j + 4 && strncmp(currentLine + j + 2, "SET", 3) == 0) continue;
                     
                     if (strlen(currentLine) > j + 5 && strncmp(currentLine + j + 2, "data", 4) == 0 && *labelPos < 0) {
                         *labelPos = i;
@@ -220,9 +192,7 @@ void translatePseudoInstructions(void) {
             strncat(token, &sourceCode->data[i][j], 1);
             
             if (sourceCode->data[i][j] == ':') {
-                if (strlen(token) > 0) {
-                    token[strlen(token) - 1] = '\0';
-                }
+                if (strlen(token) > 0) token[strlen(token) - 1] = '\0';
 
                 if (strlen(sourceCode->data[i]) > j + 5 && !strcmp(substr(sourceCode->data[i], j + 2, 3), "SET")) {
                     state = true;
@@ -266,14 +236,10 @@ void translatePseudoInstructions(void) {
                 }
             }
         }
-
-        if (!state && strlen(sourceCode->data[i]) != 0) {
-            VectorStr_Push(realInstructionsSourceCode, sourceCode->data[i]);
-        }
+        if (!state && strlen(sourceCode->data[i]) != 0) VectorStr_Push(realInstructionsSourceCode, sourceCode->data[i]);
 
         free(token);
     }
-
     sourceCode = realInstructionsSourceCode;
 }
 
@@ -303,14 +269,10 @@ void separateDataFromInstructions(void) {
                 break;
             }
         }
-        if (!state) {
-            VectorStr_Push(properlySeparatedSoureCode, sourceCode->data[i]);
-        }
+        if (!state) VectorStr_Push(properlySeparatedSoureCode, sourceCode->data[i]);
     }
 
-    for (i = 0; i < dataSegments->size; i ++) {
-        VectorStr_Push(properlySeparatedSoureCode, dataSegments->data[i]);
-    }
+    for (i = 0; i < dataSegments->size; i ++) VectorStr_Push(properlySeparatedSoureCode, dataSegments->data[i]);
 
     sourceCode = properlySeparatedSoureCode;
     VectorStr_Clear(dataSegments);
@@ -320,9 +282,7 @@ void separateDataFromInstructions(void) {
     returns whether the operand is a label / hex value / oct value / dec value    
 *********************************************************************************/
 int getOperandType(char* operand) {
-    if (strlen(operand) == 0) {
-        return 0;
-    }
+    if (strlen(operand) == 0) return 0;
 
     if (operand[0] == '+' || operand[0] == '-') {
         strrev(operand);
@@ -330,17 +290,11 @@ int getOperandType(char* operand) {
         strrev(operand);
     }
 
-    if (strlen(operand) == 0) {
-        return -1;
-    } else if (isDecimal(operand)) {
-        return 10;
-    } else if (isOctal(operand)) {
-        return 8;
-    } else if (isHexadecimal(operand)) {
-        return 16;
-    } else if (checkLabelIdentifierValidity(operand)) {
-        return 1;
-    }
+    if (strlen(operand) == 0) return -1;
+    else if (isDecimal(operand)) return 10;
+    else if (isOctal(operand)) return 8;
+    else if (isHexadecimal(operand)) return 16;
+    else if (checkLabelIdentifierValidity(operand)) return 1;
     return -1;
 }
 
@@ -383,9 +337,7 @@ void tabulateSourceCode(void) {
             }
 
             strncat(curr, &sourceCode->data[i][j], 1);
-            if (j == length - 1) {
-                VectorStr_Insert(row, ptr ++, curr);
-            }
+            if (j == length - 1) VectorStr_Insert(row, ptr ++, curr);
         }
         
         if (strlen(row->data[1]) != 0) {
@@ -396,13 +348,9 @@ void tabulateSourceCode(void) {
             VectorListingCustom_Insert(&sourceTable, &tmp, i, "isLabelPresent");
         }
         
-        if (!strcmp(row->data[1], "HALT")) {
-            isHaltPresent = true;
-        }
+        if (!strcmp(row->data[1], "HALT")) isHaltPresent = true;
         
-        if (strlen(row->data[0]) != 0) {
-            MapStrToInt_Add(labels, row->data[0], PC);
-        }
+        if (strlen(row->data[0]) != 0) MapStrToInt_Add(labels, row->data[0], PC);
         
         VectorInt_Insert(&programCounter, i, PC);
     
@@ -441,11 +389,8 @@ void tabulateSourceCode(void) {
         opType = getOperandType(row->data[2]);
         VectorListingCustom_Insert(&sourceTable, &opType, i, "operandType");
 
-        if (sourceTable.data[i].operandType == 1 && MapStrToInt_Find(labels, sourceTable.data[i].operand) == NULL) {
-            raiseError(i + 1, "no such label");
-        } else if (sourceTable.data[i].operandType == -1) {
-            raiseError(i + 1, "invalid number");
-        }
+        if (sourceTable.data[i].operandType == 1 && MapStrToInt_Find(labels, sourceTable.data[i].operand) == NULL) raiseError(i + 1, "no such label");
+        else if (sourceTable.data[i].operandType == -1) raiseError(i + 1, "invalid number");
 
         free(curr);
         VectorStr_Clear(row);
@@ -463,9 +408,7 @@ void executePass1(char* sourceFilePath) {
     if (sourceFile == NULL) {
         fprintf(stderr, "\n::: ASSEMBLER_ERROR: could not open file \"%s\"\n\n", sourceFilePath);
         exit(-2);
-    }
-    
-    printf("\n>>> loaded \"%s\"\n", sourceFilePath);
+    } else printf("\n>>> loaded \"%s\"\n", sourceFilePath);
 
     sourceCode = VectorStr_Initialize();
     
@@ -482,17 +425,13 @@ void executePass1(char* sourceFilePath) {
     if (fclose(sourceFile) != 0) {
         fprintf(stderr, "\n::: ASSEMBLER_ERROR: could not close file \"%s\"\n\n", sourceFilePath);
         exit(-3);
-    } else {
-        printf(">>> parsed \"%s\"\n", sourceFilePath);
-    }
+    } else printf(">>> parsed \"%s\"\n", sourceFilePath);
 
     initializeInstructionSet();
     
     parseLabels();
 
-    if (errors->size == 0) {
-        translatePseudoInstructions();
-    }
+    if (errors->size == 0) translatePseudoInstructions();
 
     VectorListingCustom_Initialize(&sourceTable);
     VectorListingCustom_Resize(&sourceTable, sourceCode->size);
@@ -515,14 +454,10 @@ bool logAssemblyProcess(char* sourceFilePath) {
     
     if (errors->size == 0) {
         printf(">>> SUCCESS: assembly completed for \"%s\"\n", sourceFilePath);
-        if (!isHaltPresent) {
-            printf(">>> WARNING: HALT not present\n");
-        }
-        printf(">>> 0 errors encountered\n");
-        printf(">>> generated binary file \"machine-code.out\" in current directory\n");
-        printf(">>> generated listing file \"list-code.list\" in current directory\n");
         
-        printf("\n--------------------- ASSEMBLER LOG ENDS ---------------------\n");
+        if (!isHaltPresent) printf(">>> WARNING: HALT not present\n");
+
+        printf(">>> 0 errors encountered\n");
 
         return false;
     }
@@ -531,13 +466,42 @@ bool logAssemblyProcess(char* sourceFilePath) {
     printf(">>> %ld errors encountered\n", errors->size);
 
     VectorPairIntStr_Sort(errors);
-    for (i = 0; (unsigned) i < errors->size; i ++) {
-        printf("\t::: %s\n", errors->data[i].second);
-    }
+    for (i = 0; (unsigned) i < errors->size; i ++) printf("\t::: %s\n", errors->data[i].second);
 
     printf("\n--------------------- ASSEMBLER LOG ENDS ---------------------\n\n");
     
     return true;
+}
+
+/*********************************************************************
+    generates binary file containing machine-code and listing file    
+*********************************************************************/
+void generateOutFiles(void) {
+    FILE* listFilePtr = fopen("listing.lst", "w");
+    FILE* machineCodeFilePtr = fopen("machine-code.out", "wb");
+    
+    size_t i;
+
+    for (i = 0; i < machineCode->size; i ++) {
+        fprintf(listFilePtr, "%s %s %s\n", padWithZero(decimalToHex(programCounter.data[machineCode->data[i].first], 24), 6), machineCode->data[i].second, sourceCode->data[machineCode->data[i].first]);
+    }
+    fclose(listFilePtr);
+
+    printf(">>> generated listing file \"listing.lst\" in current directory\n");
+
+    for (i = 0; i < machineCode->size; i ++) {
+        unsigned int tmp;
+
+        if (strlen(machineCode->data[i].second) == 0 || !strcmp(machineCode->data[i].second, "        ")) continue;
+
+        sscanf(machineCode->data[i].second, "%x", &tmp);
+        fwrite(&tmp, sizeof(unsigned int), 1, machineCodeFilePtr);
+    }
+    fclose(machineCodeFilePtr);
+
+    printf(">>> generated binary file \"machine-code.out\" in current directory\n");
+    
+    printf("\n--------------------- ASSEMBLER LOG ENDS ---------------------\n\n");
 }
 
 /*******************************************************
@@ -549,9 +513,7 @@ void executePass2(void) {
     machineCode = VectorPairIntStr_Initialize();
 
     for (i = 0; i < sourceTable.size; i ++) {
-        if (strlen(sourceCode->data[i]) == 0) {
-            continue;
-        }
+        if (strlen(sourceCode->data[i]) == 0) continue;
         
         if (strlen(sourceTable.data[i].mnemonic) == 0) {
             VectorPairIntStr_Push(machineCode, i, "        ");
@@ -562,9 +524,7 @@ void executePass2(void) {
             char curr[33];
             int* val = MapStrToInt_Find(labels, sourceTable.data[i].operand);
             int decimalForm = *val;
-            if (MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->second == 2) {
-                decimalForm -= (programCounter.data[i] + 1);
-            }
+            if (MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->second == 2) decimalForm -= (programCounter.data[i] + 1);
             
             sprintf(curr, "%s%s", padWithZero(decimalToHex(decimalForm, 24), 6), MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->first);
             VectorPairIntStr_Push(machineCode, i, curr);
@@ -590,46 +550,20 @@ void executePass2(void) {
             VectorPairIntStr_Push(machineCode, i, curr);
         }
     }
+
+    generateOutFiles();
 }
 
 int main(int argc, char* argv[]) {
-    /********** for testing **********/
-    unsigned  i;
-    /********** testing ends **********/
-
     if (argc != 2) {
-        fprintf(stderr, "\n::: ASSEMBLER_ERROR: Usage: ./assemble.exe <source-file-path>\n\n");
+        fprintf(stderr, "\n::: ASSEMBLER_ERROR: usage: ./assemble.exe <source-file-path>\n\n");
         exit(-1);
     }
 
     executePass1(argv[1]);
-    
-    /********** for testing **********/
-    /* for (i = 0; i < (unsigned) sourceCode->size; i ++) {
-        printf("%s\n", sourceCode->data[i]);
-    }
-    printf("\n");
-    for (i = 0; i < errors.size; i ++) {
-        printf("%d %s\n", errors.data[i].first, errors.data[i].second);
-    }
-    printf("\n");
-    for (i = 0; i < labels->size; i ++) {
-        printf("%s %d\n", labels->data[i].key, labels->data[i].value);
-    }
-    printf("\n");
-    for (i = 0; i < sourceTable.size; i ++) {
-        printf("%s %s %s %d %d\n", sourceTable.data[i].label, sourceTable.data[i].mnemonic, sourceTable.data[i].operand, sourceTable.data[i].operandType, sourceTable.data[i].isLabelPresent);
-    } */
-    /********** testing ends **********/
 
     if (!logAssemblyProcess(argv[1])) {
         executePass2();
-
-        /********** for testing **********/
-        for (i = 0; i < machineCode->size; i ++) {
-            printf("%d %s\n", machineCode->data[i].first, machineCode->data[i].second);
-        }
-        /********** testing ends **********/
 
         VectorPairIntStr_Clear(machineCode);
     }
