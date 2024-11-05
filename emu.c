@@ -92,14 +92,10 @@ void return_(int value) {
     value *= 0; /* to prevent compilation warnings */
 }
 void brz(int offset) {
-    if (A == 0) {
-        PC += offset;
-    }
+    if (A == 0) PC += offset;
 }
 void brlz(int offset) {
-    if (A < 0) {
-        PC += offset;
-    }
+    if (A < 0) PC += offset;
 }
 void br(int offset) {
     PC += offset;
@@ -182,9 +178,7 @@ void bdump(void) {
     for (i = 0; i < machineCode.size; i += 4) {
         int j;
         printf("\t--- %s ", decimalToHexVE(i));
-        for (j = i; j < minOf2Ints(machineCode.size, i + 4); ++ j) {
-            printf("%s ", decimalToHexVE(machineCode.data[j]));
-        }
+        for (j = i; j < minOf2Ints(machineCode.size, i + 4); ++ j) printf("%s ", decimalToHexVE(machineCode.data[j]));
         printf("\n");
     }
 
@@ -199,9 +193,7 @@ void adump(void) {
     for (i = 0; i < machineCode.size; i += 4) {
         int j;
         printf("\t--- %s ", decimalToHexVE(i));
-        for (j = i; j < minOf2Ints(machineCode.size, i + 4); ++ j) {
-            printf("%s ", decimalToHexVE(virtualMemory[j]));
-        }
+        for (j = i; j < minOf2Ints(machineCode.size, i + 4); ++ j) printf("%s ", decimalToHexVE(virtualMemory[j]));
         printf("\n");
     }
 }
@@ -228,9 +220,7 @@ void runEmulator(char* flag) {
             if (!strcmp(flag, "-trace")) {
                 printf("PC = %08x, SP = %08x, A = %08x, B = %08x ", PC, SP, A, B);
                 printf("%s ", mnemonics[opCode]);
-                if (MapStrToPairStrInt_Find(instructionSet, mnemonics[opCode])->second > 0) {
-                    printf("%s", decimalToHexVE(value));
-                }
+                if (MapStrToPairStrInt_Find(instructionSet, mnemonics[opCode])->second > 0) printf("%s", decimalToHexVE(value));
                 printf("\n");
             } else if (!strcmp(flag, "-reads") && (opCode == 2 || opCode == 4)) {
                 printf(">>> reading from location [%s] --- value [%s]\n", decimalToHexVE(read_write[0]), decimalToHexVE(A));
@@ -238,21 +228,13 @@ void runEmulator(char* flag) {
                 printf(">>> writing to location [%s] --- changed value from [%s] to [%s]\n", decimalToHexVE(read_write[0]), decimalToHexVE(read_write[1]), decimalToHexVE(virtualMemory[read_write[0]]));
             }
 
-            if (opCode >= 18) {
-                break;
-            }
+            if (opCode >= 18) break;
         }
 
-        if (!strcmp(flag, "-trace")) {
-            printf("\n>>> program execution finished\n");
-        } else if (!strcmp(flag, "-bdump")) {
-            bdump();
-        } else if (!strcmp(flag, "-adump")) {
-            adump();
-        }
-    } else if (!strcmp(flag, "-wipe")) {
-        A = B = SP = PC = 0;
-    }
+        if (!strcmp(flag, "-trace")) printf("\n>>> program execution finished\n");
+        else if (!strcmp(flag, "-bdump")) bdump();
+        else if (!strcmp(flag, "-adump")) adump();
+    } else if (!strcmp(flag, "-wipe")) A = B = SP = PC = 0;
 
     printf("\n>>> %d instructions executed\n\n", numInstructions);
 }
