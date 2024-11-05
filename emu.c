@@ -261,7 +261,7 @@ int main(int argc, char* argv[]) {
         printf("\t-isa     show instruction set\n");
         printf("\t-man     show emulator manual\n");
         printf("\n--------------------- EMULATOR MANUAL ENDS ---------------------\n\n");
-        exit(-1);
+        return 0;
     } else if (strcmp(argv[1], "-isa") == 0) {
         if (argc == 3) printf("\n>>> ignored everything specified after -isa\n");
         printf("\n +--------+----------+---------+\n");
@@ -287,7 +287,7 @@ int main(int argc, char* argv[]) {
         printf(" | 18     | HALT     | -----   |\n");
         printf(" | --     | SET      | value   |\n");
         printf(" +--------+----------+---------+\n\n");
-        exit(-1);
+        return 0;
     }
 
     if (!strcmp(argv[1], "-trace") || !strcmp(argv[1], "-reads") || !strcmp(argv[1], "-writes") || !strcmp(argv[1], "-bdump") || !strcmp(argv[1], "-adump") || !strcmp(argv[1], "-wipe")) {
