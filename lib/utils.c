@@ -8,28 +8,18 @@
     reads a line from a file and returns it    
 **********************************************/
 char* readLine(FILE* filePtr) {
-    int ch;
     size_t len = 0;
     size_t capacity = 128;
 
     char* buffer = malloc(capacity);
 
-    if (!buffer) {
-        fprintf(stderr, "ASSEMBLER_ERROR: could not allocate memory\n");
-        return NULL;
-    }
-
+    int ch;
     while ((ch = fgetc(filePtr)) != EOF && ch != '\n') {
         if (len + 1 >= capacity) {
             char* temp = NULL;
             
             capacity *= 2;
             temp = realloc(buffer, capacity);
-            if (!temp) {
-                fprintf(stderr, "ASSEMBLER_ERROR: could not allocate memory\n");
-                free(buffer);
-                return NULL;
-            }
             buffer = temp;
         }
         buffer[len ++] = ch;
@@ -44,15 +34,12 @@ char* readLine(FILE* filePtr) {
     return buffer;
 }
 
-
 /*****************************************
     duplicates a string and returns it    
 *****************************************/
 char* strdup(const char *str) {
     char* dup = malloc(strlen(str) + 1);
-    if (dup == NULL) {
-        return NULL;
-    }
+    if (dup == NULL) return NULL;
     strcpy(dup, str);
     return dup;
 }
@@ -63,14 +50,11 @@ char* strdup(const char *str) {
 void strrev(char* str) {
     int i = 0;
     int j = strlen(str) - 1;
-    
     while (i < j) {
         char temp = str[i];
         str[i] = str[j];
         str[j] = temp;
-
-        i ++;
-        j --;
+        i ++; j --;
     }
 }
 
@@ -106,12 +90,9 @@ char* decimalToHexVA(int number, int add) { /* default add = 24 */
         return hexString;
     }
 
-    if (number < 0) {
-        number += (1 << add);
-    }
+    if (number < 0) number += (1 << add);
 
     sprintf(hexString, "%x", number);
-    
     return hexString;
 }
 
@@ -125,9 +106,7 @@ char* decimalToHexVE(unsigned int number) {
     int i = 7;
 
     int j;
-    for (j = 0; j < 8; j ++) {
-        converted[j] = '0';
-    }
+    for (j = 0; j < 8; j ++) converted[j] = '0';
     converted[8] = '\0';
 
     while (number != 0 && i >= 0) {
@@ -135,7 +114,6 @@ char* decimalToHexVE(unsigned int number) {
         number /= 16;
         i --;
     }
-
     return converted;
 }
 
@@ -143,24 +121,19 @@ char* decimalToHexVE(unsigned int number) {
     pads the start of a string with 0s to make a size-bit string of numbers    
 ****************************************************************************/
 const char* padWithZero(char* numStr, int size) { /* default size = 6 */
-    unsigned int i;
-
     static char paddedNumStr[33];
+
+    unsigned int i;
 
     strrev(numStr);
 
-    for (i = 0; i < strlen(numStr); i ++) {
-        paddedNumStr[i] = numStr[i];
-    }
+    for (i = 0; i < strlen(numStr); i ++) paddedNumStr[i] = numStr[i];
     paddedNumStr[strlen(numStr)] = '\0';
 
-    while (strlen(paddedNumStr) < (unsigned) size) {
-        strcat(paddedNumStr, "0");
-    }
+    while (strlen(paddedNumStr) < (unsigned) size) strcat(paddedNumStr, "0");
 
     strrev(numStr);
     strrev(paddedNumStr);
-
     return paddedNumStr;
 }
 
@@ -169,10 +142,9 @@ const char* padWithZero(char* numStr, int size) { /* default size = 6 */
 ***********************************************************/
 bool isDecimal(char* s) {
     bool verdict = true;
+
     unsigned int i;
-    for (i = 0; i < strlen(s); i ++) {
-        verdict &= (s[i] >= '0' && s[i] <= '9');
-    }
+    for (i = 0; i < strlen(s); i ++) verdict &= (s[i] >= '0' && s[i] <= '9');
     return verdict;
 }
 
@@ -184,13 +156,9 @@ bool isOctal(char* s) {
 
     unsigned int i;
 
-    if (strlen(s) < 3) {
-        return false;
-    }
+    if (strlen(s) < 3) return false;
     
-    for (i = 2; i < strlen(s); i ++) {
-        verdict &= (s[i] >= '0' && s[i] <= '7');
-    }
+    for (i = 2; i < strlen(s); i ++) verdict &= (s[i] >= '0' && s[i] <= '7');
     return verdict & (s[0] == '0' && (s[1] == 'o' || s[1] == 'O'));
 }
 
@@ -202,12 +170,8 @@ bool isHexadecimal(char* s) {
 
     unsigned int i;
 
-    if (strlen(s) < 3) {
-        return false;
-    }
+    if (strlen(s) < 3) return false;
 
-    for (i = 2; i < strlen(s); i ++) {
-        verdict &= ((s[i] >= '0' && s[i] <= '9') || (s[i] >= 'a' && s[i] <= 'f') || (s[i] >= 'A' && s[i] <= 'F'));
-    }
+    for (i = 2; i < strlen(s); i ++) verdict &= ((s[i] >= '0' && s[i] <= '9') || (s[i] >= 'a' && s[i] <= 'f') || (s[i] >= 'A' && s[i] <= 'F'));
     return verdict & (s[0] == '0' && (s[1] == 'x' || s[1] == 'X'));
 }
