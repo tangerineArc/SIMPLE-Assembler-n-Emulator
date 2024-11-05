@@ -14,7 +14,9 @@ char* substr(const char* string, int start, int length); /* returns a slice of a
 
 int minOf2Ints(int a, int b); /* returns the minimum of two integers */
 
-char* decimalToHex(int number, int add); /* converts a decimal integer to a hexadecimal string */
+char* decimalToHexVA(int number, int add); /* converts a decimal integer to a hexadecimal string in assembler */
+
+char* decimalToHexVE(unsigned int number); /* converts a decimal integer to a hexadecimal string in emulator */
 
 char* padWithZero(char* numStr, int size); /* pads the start of a string with 0s to make a size-bit string of numbers */
 

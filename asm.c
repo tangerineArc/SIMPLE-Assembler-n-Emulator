@@ -483,7 +483,7 @@ void generateOutFiles(void) {
     size_t i;
 
     for (i = 0; i < machineCode->size; i ++) {
-        fprintf(listFilePtr, "%s %s %s\n", padWithZero(decimalToHex(programCounter.data[machineCode->data[i].first], 24), 6), machineCode->data[i].second, sourceCode->data[machineCode->data[i].first]);
+        fprintf(listFilePtr, "%s %s %s\n", padWithZero(decimalToHexVA(programCounter.data[machineCode->data[i].first], 24), 6), machineCode->data[i].second, sourceCode->data[machineCode->data[i].first]);
     }
     fclose(listFilePtr);
 
@@ -526,7 +526,7 @@ void executePass2(void) {
             int decimalForm = *val;
             if (MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->second == 2) decimalForm -= (programCounter.data[i] + 1);
             
-            sprintf(curr, "%s%s", padWithZero(decimalToHex(decimalForm, 24), 6), MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->first);
+            sprintf(curr, "%s%s", padWithZero(decimalToHexVA(decimalForm, 24), 6), MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->first);
             VectorPairIntStr_Push(machineCode, i, curr);
         } else if (sourceTable.data[i].operandType == 0) {
             char curr[33];
@@ -546,7 +546,7 @@ void executePass2(void) {
                 add = 32;
             }
 
-            sprintf(curr, "%s%s", padWithZero(decimalToHex(decimalForm, add), size), MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->first);
+            sprintf(curr, "%s%s", padWithZero(decimalToHexVA(decimalForm, add), size), MapStrToPairStrInt_Find(instructionSet, sourceTable.data[i].mnemonic)->first);
             VectorPairIntStr_Push(machineCode, i, curr);
         }
     }

@@ -94,12 +94,12 @@ int minOf2Ints(int a, int b) {
     return b;
 }
 
-/*********************************************************
-    converts a decimal integer to a hexadecimal string    
-*********************************************************/
-char* decimalToHex(int number, int add) { /* default add = 24 */
+/**********************************************************************
+    converts a decimal integer to a hexadecimal string in assembler    
+**********************************************************************/
+char* decimalToHexVA(int number, int add) { /* default add = 24 */
     static char hexString[33];
-    
+
     if (add == 32) {
         unsigned int num = number;
         sprintf(hexString, "%x", num);
@@ -113,6 +113,30 @@ char* decimalToHex(int number, int add) { /* default add = 24 */
     sprintf(hexString, "%x", number);
     
     return hexString;
+}
+
+/*********************************************************************
+    converts a decimal integer to a hexadecimal string in emulator    
+*********************************************************************/
+char* decimalToHexVE(unsigned int number) {
+    const char hexDigits[] = "0123456789abcdef";
+    char* converted = (char*) malloc(9 * sizeof(char));
+
+    int i = 7;
+
+    int j;
+    for (j = 0; j < 8; j ++) {
+        converted[j] = '0';
+    }
+    converted[8] = '\0';
+
+    while (number != 0 && i >= 0) {
+        converted[i] = hexDigits[number % 16];
+        number /= 16;
+        i --;
+    }
+
+    return converted;
 }
 
 /****************************************************************************
