@@ -534,7 +534,6 @@ void executePass2(void) {
             VectorPairIntStr_Push(machineCode, i, curr);
         } else {
             char* end;
-
             int decimalForm = strtol(sourceTable.data[i].operand, &end, sourceTable.data[i].operandType);
 
             char curr[33];

@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,39 +6,110 @@
 #include "./headers/dataStructures.h"
 #include "./headers/utils.h"
 
-MapStrToPairStrInt* instructionSet; /* stores {mnemonic : (opcode, numOperands)} */
 VectorInt machineCode; /* stores machine-code from assembled file */
+MapStrToPairStrInt* instructionSet; /* stores {mnemonic : (opcode, numOperands)} */
 
 int virtualMemory[1 << 24]; /* allocates memory for the emulator */
+int read_write[2]; /* stores a pair of read-write locations */
 
-VectorStr* mnemonics;
+int numInstructions = 0; /* total number instructions executed */
+int PC = 0; /* program counter */
+int A = 0, B = 0, SP = 0; /* register A, register B, stack-pointer */
 
-/***********************************************
-    generates an array of accepted mnemonics    
-***********************************************/
-void initializeMnemonics(void) {
-    mnemonics = VectorStr_Initialize();
+const char* mnemonics[] = {
+    "ldc", "adc", "ldl", "stl", "ldnl", "stnl", "add", "sub", "shl", "shr", "adj", "a2sp", "sp2a", "call", "return", "brz", "brlz", "br", "HALT"
+};
 
-    VectorStr_Push(mnemonics, "ldc");
-    VectorStr_Push(mnemonics, "adc");
-    VectorStr_Push(mnemonics, "ldl");
-    VectorStr_Push(mnemonics, "stl");
-    VectorStr_Push(mnemonics, "ldnl");
-    VectorStr_Push(mnemonics, "stnl");
-    VectorStr_Push(mnemonics, "add");
-    VectorStr_Push(mnemonics, "sub");
-    VectorStr_Push(mnemonics, "shl");
-    VectorStr_Push(mnemonics, "shr");
-    VectorStr_Push(mnemonics, "adj");
-    VectorStr_Push(mnemonics, "a2sp");
-    VectorStr_Push(mnemonics, "sp2a");
-    VectorStr_Push(mnemonics, "call");
-    VectorStr_Push(mnemonics, "return");
-    VectorStr_Push(mnemonics, "brz");
-    VectorStr_Push(mnemonics, "brlz");
-    VectorStr_Push(mnemonics, "br");
-    VectorStr_Push(mnemonics, "HALT");
+/*******************************************
+    functions implmenting ISA operations    
+*******************************************/
+void ldc(int value) {
+    B = A;
+    A = value;
 }
+void adc(int value) {
+    A += value;
+}
+void ldl(int offset) {
+    B = A;
+    A = virtualMemory[SP + offset];
+    read_write[0] = SP + offset;
+    read_write[1] = 0;
+}
+void stl(int offset) {
+    read_write[0] = SP + offset;
+    read_write[1] = virtualMemory[SP + offset];
+    virtualMemory[SP + offset] = A;
+    A = B;
+}
+void ldnl(int offset) {
+    A = virtualMemory[A + offset];
+    read_write[0] = SP + offset;
+    read_write[1] = 0;
+}
+void stnl(int offset) {
+    read_write[0] = SP + offset;
+    read_write[1] = virtualMemory[SP + offset];
+    virtualMemory[A + offset] = B;
+}
+void add(int value) {
+    A += B;
+    value *= 0; /* to prevent compilation warnings */
+}
+void sub(int value) {
+    A = B - A;
+    value *= 0; /* to prevent compilation warnings */
+}
+void shl(int value) {
+    A = B << A;
+    value *= 0; /* to prevent compilation warnings */
+}
+void shr(int value) {
+    A = B >> A;
+    value *= 0; /* to prevent compilation warnings */
+}
+void adj(int value) {
+    SP += value;
+}
+void a2sp(int value) {
+    SP = A;
+    A = B;
+    value *= 0; /* to prevent compilation warnings */
+}
+void sp2a(int value) {
+    B = A;
+    A = SP;
+    value *= 0; /* to prevent compilation warnings */
+}
+void call(int offset) {
+    B = A;
+    A = PC;
+    PC += offset;
+}
+void return_(int value) {
+    PC = A + value;
+    A = B;
+    value *= 0; /* to prevent compilation warnings */
+}
+void brz(int offset) {
+    if (A == 0) {
+        PC += offset;
+    }
+}
+void brlz(int offset) {
+    if (A < 0) {
+        PC += offset;
+    }
+}
+void br(int offset) {
+    PC += offset;
+}
+void HALT(int value) {
+    value *= 0; /* to prevent compilation warnings */
+    return;
+}
+
+void (*operations[])(int) = {ldc, adc, ldl, stl, ldnl, stnl, add, sub, shl, shr, adj, a2sp, sp2a, call, return_, brz, brlz, br, HALT};
 
 /************************************************************
     generates a map of {mnemonic : (opcode, numOperands)}    
@@ -71,7 +143,7 @@ void initializeInstructionSet(void) {
 /*******************************************************************
     parses machine-code from assembled file and stores in memory    
 *******************************************************************/
-void readMachineCode(char* binaryFilePath) {
+void parseAssembledFile(char* binaryFilePath) {
     FILE* binaryFile = fopen(binaryFilePath, "rb");
 
     unsigned int read;
@@ -101,6 +173,90 @@ void readMachineCode(char* binaryFilePath) {
     }
 }
 
+/******************************************************
+    prints memory contents before program execution    
+******************************************************/
+void bdump(void) {
+    size_t i;
+    printf(">>> memory dump before program execution\n\n");
+    for (i = 0; i < machineCode.size; i += 4) {
+        int j;
+        printf("\t--- %s ", decimalToHexVE(i));
+        for (j = i; j < minOf2Ints(machineCode.size, i + 4); ++ j) {
+            printf("%s ", decimalToHexVE(machineCode.data[j]));
+        }
+        printf("\n");
+    }
+
+}
+
+/*****************************************************************
+    prints memory contents after program execution is finished    
+*****************************************************************/
+void adump(void) {
+    size_t i;
+    printf(">>> memory dump after program execution\n\n");
+    for (i = 0; i < machineCode.size; i += 4) {
+        int j;
+        printf("\t--- %s ", decimalToHexVE(i));
+        for (j = i; j < minOf2Ints(machineCode.size, i + 4); ++ j) {
+            printf("%s ", decimalToHexVE(virtualMemory[j]));
+        }
+        printf("\n");
+    }
+}
+
+/*********************************************************
+    carry out instructions as per the specified option    
+*********************************************************/
+void runEmulator(char* flag) {
+    if (!strcmp(flag, "-trace") || !strcmp(flag, "-reads") || !strcmp(flag, "-writes") || !strcmp(flag, "-bdump") || !strcmp(flag, "-adump")) {
+        while ((size_t) PC < machineCode.size) {
+            int curr = machineCode.data[PC ++];
+            int opCode = curr & 0xff;
+            int value = (curr - opCode) >> 8;
+            
+            numInstructions ++;
+
+            operations[opCode](value);
+
+            if (PC < 0 || (size_t) PC > machineCode.size || numInstructions > (1 << 24)) {
+                printf("::: ERROR: segmentation fault: exceeded virtual-memory limit\n");
+                break;
+            }
+
+            if (!strcmp(flag, "-trace")) {
+                printf("PC = %08x, SP = %08x, A = %08x, B = %08x ", PC, SP, A, B);
+                printf("%s ", mnemonics[opCode]);
+                if (MapStrToPairStrInt_Find(instructionSet, mnemonics[opCode])->second > 0) {
+                    printf("%s", decimalToHexVE(value));
+                }
+                printf("\n");
+            } else if (!strcmp(flag, "-reads") && (opCode == 2 || opCode == 4)) {
+                printf(">>> reading from location [%s] --- value [%s]\n", decimalToHexVE(read_write[0]), decimalToHexVE(A));
+            } else if (!strcmp(flag, "-writes") && (opCode == 3 || opCode == 5)) {
+                printf(">>> writing to location [%s] --- changed value from [%s] to [%s]\n", decimalToHexVE(read_write[0]), decimalToHexVE(read_write[1]), decimalToHexVE(virtualMemory[read_write[0]]));
+            }
+
+            if (opCode >= 18) {
+                break;
+            }
+        }
+
+        if (!strcmp(flag, "-trace")) {
+            printf("\n>>> program execution finished\n");
+        } else if (!strcmp(flag, "-bdump")) {
+            bdump();
+        } else if (!strcmp(flag, "-adump")) {
+            adump();
+        }
+    } else if (!strcmp(flag, "-wipe")) {
+        A = B = SP = PC = 0;
+    }
+
+    printf("\n>>> %d instructions executed\n\n", numInstructions);
+}
+
 int main(int argc, char* argv[]) {
     if (argc != 3 && argc != 2) {
         fprintf(stderr, "\n::: EMULATOR_ERROR: usage: ./emulate.exe [OPTION] <executable-file-path>\n");
@@ -114,14 +270,14 @@ int main(int argc, char* argv[]) {
         printf("\n-------------------- EMULATOR MANUAL STARTS --------------------\n\n");
         printf(">>> usage: ./emulate.exe [OPTION] <executable-file-path>\n");
         printf(">>> available options:\n");
-        printf("\t-trace  show instruction trace\n");
-        printf("\t-read   show memory reads\n");
-        printf("\t-write  show memory writes\n");
-        printf("\t-bdump  show memory dump before execution\n");
-        printf("\t-adump  show memory dump after execution\n");
-        printf("\t-wipe   wipe written flags before execution\n");
-        printf("\t-isa    show instruction set\n");
-        printf("\t-man    show emulator manual\n");
+        printf("\t-trace   show instruction trace\n");
+        printf("\t-reads   show memory reads\n");
+        printf("\t-writes  show memory writes\n");
+        printf("\t-bdump   show memory dump before execution\n");
+        printf("\t-adump   show memory dump after execution\n");
+        printf("\t-wipe    wipe written flags before execution\n");
+        printf("\t-isa     show instruction set\n");
+        printf("\t-man     show emulator manual\n");
         printf("\n--------------------- EMULATOR MANUAL ENDS ---------------------\n\n");
         exit(-1);
     } else if (strcmp(argv[1], "-isa") == 0) {
@@ -152,7 +308,7 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
-    if (!strcmp(argv[1], "-trace") || !strcmp(argv[1], "-read") || !strcmp(argv[1], "-write") || !strcmp(argv[1], "-bdump") || !strcmp(argv[1], "-adump") || !strcmp(argv[1], "-wipe")) {
+    if (!strcmp(argv[1], "-trace") || !strcmp(argv[1], "-reads") || !strcmp(argv[1], "-writes") || !strcmp(argv[1], "-bdump") || !strcmp(argv[1], "-adump") || !strcmp(argv[1], "-wipe")) {
         if (argc == 2) {
             fprintf(stderr, "\n::: EMULATOR_ERROR: expected a file-path after \"%s\"\n\n", argv[1]);
             exit(-1);
@@ -164,14 +320,14 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
-    readMachineCode(argv[2]);
+    parseAssembledFile(argv[2]);
 
     initializeInstructionSet();
-    initializeMnemonics();
+
+    runEmulator(argv[1]);
 
     MapStrToPairStrInt_Clear(instructionSet);
     VectorInt_Clear(&machineCode);
-    VectorStr_Clear(mnemonics);
 
     return 0;
 }
