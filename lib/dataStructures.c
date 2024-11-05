@@ -21,29 +21,21 @@ void VectorInt_Initialize(VectorInt* vector) {
 /***** resizes the vector to a specified new capacity *****/
 void VectorInt_Resize(VectorInt* vector, size_t newSize) {
     size_t i;
-
+    
     if (newSize > vector->capacity) {
         size_t newCapacity = (newSize > 2 * vector->capacity) ? newSize : 2 * vector->capacity;
         int* newData = (int*) realloc(vector->data, newCapacity * sizeof(int));
-        if (!newData) {
-            printf("INTERNAL_ERROR: memory allocation failed in \"void VectorInt_Resize(VectorInt* vector, size_t newSize)\"\n");
-            return;
-        }
         vector->data = newData;
         vector->capacity = newCapacity;
     }
 
-    for (i = vector->size; i < newSize; ++ i) {
-        vector->data[i] = 0;
-    }
+    for (i = vector->size; i < newSize; ++ i) vector->data[i] = 0;
     vector->size = newSize;
 }
 
 /***** inserts a value at a specific index *****/
 void VectorInt_Insert(VectorInt* vector, size_t index, int value) {
-    if (index >= vector->size) {
-        VectorInt_Resize(vector, index + 1);
-    }
+    if (index >= vector->size) VectorInt_Resize(vector, index + 1);
     vector->data[index] = value;
 }
 
@@ -90,15 +82,11 @@ void VectorStr_Resize(VectorStr* vector, int newSize) {
         vector->data = (char**) realloc(vector->data, vector->capacity * sizeof(char*));
     }
 
-    for (i = vector->size; i < newSize; i ++) {
-        vector->data[i] = strdup("");
-    }
+    for (i = vector->size; i < newSize; i ++) vector->data[i] = strdup("");
 
     if (newSize < vector->size) {
         int i;
-        for (i = newSize; i < vector->size; i ++) {
-            free(vector->data[i]);
-        }
+        for (i = newSize; i < vector->size; i ++) free(vector->data[i]);
     }
 
     vector->size = newSize;
@@ -106,28 +94,16 @@ void VectorStr_Resize(VectorStr* vector, int newSize) {
 
 /***** inserts a string at a specific index *****/
 void VectorStr_Insert(VectorStr* vector, int index, const char* string) {
-    if (index < 0 || index > vector->size) {
-        printf("INTERNAL_ERROR: index out of bounds in \"void VectorStr_Insert(VectorStr* vector, int index, const char* string)\"\n");
-        return;
-    }
+    if (index >= vector->size) VectorStr_Resize(vector, index + 1);
 
-    if (index >= vector->size) {
-        VectorStr_Resize(vector, index + 1);
-    }
-
-    if (vector->data[index] != NULL) {
-        free(vector->data[index]);
-    }
-
+    if (vector->data[index] != NULL) free(vector->data[index]);
     vector->data[index] = strdup(string);
 }
 
 /***** frees allocated memory *****/
 void VectorStr_Clear(VectorStr* vector) {
     int i;
-    for (i = 0; i < vector->size; i ++) {
-        free(vector->data[i]);
-    }
+    for (i = 0; i < vector->size; i ++) free(vector->data[i]);
     free(vector->data);
     free(vector);
 }
@@ -161,7 +137,6 @@ VectorPairIntStr* VectorPairIntStr_Initialize() {
 
 void _VectorPairIntStr_Resize(VectorPairIntStr* vector) {
     size_t newCapacity = vector->capacity * 2;
-
     PairIntStr* newData = realloc(vector->data, newCapacity * sizeof(PairIntStr));
     vector->data = newData;
     vector->capacity = newCapacity;
@@ -169,10 +144,7 @@ void _VectorPairIntStr_Resize(VectorPairIntStr* vector) {
 
 /***** pushes an integer-string pair to the end *****/
 void VectorPairIntStr_Push(VectorPairIntStr* vector, int first, const char* second) {
-    if (vector->size >= vector->capacity) {
-        _VectorPairIntStr_Resize(vector);
-    }
-    
+    if (vector->size >= vector->capacity) _VectorPairIntStr_Resize(vector);
     vector->data[vector->size].first = first;
     vector->data[vector->size].second = strdup(second);
     vector->size ++;
@@ -186,10 +158,7 @@ void VectorPairIntStr_Sort(VectorPairIntStr* vector) {
 /***** frees allocated memory *****/
 void VectorPairIntStr_Clear(VectorPairIntStr* vector) {
     size_t i;
-    for (i = 0; i < vector->size; i ++) {
-        free(vector->data[i].second);
-    }
-
+    for (i = 0; i < vector->size; i ++) free(vector->data[i].second);
     free(vector->data);
     free(vector);
 }
@@ -203,18 +172,7 @@ MapStrToPairStrInt* MapStrToPairStrInt_Initialize(void) {
     size_t initialCapacity = 4;
 
     MapStrToPairStrInt* map = (MapStrToPairStrInt*) malloc(sizeof(MapStrToPairStrInt));
-    if (!map) {
-        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"MapStrToPairStrInt* MapStrToPairStrInt_Initialize(void)\"\n");
-        return NULL;
-    }
-
     map->data = (_MapEntryStrToPairStrInt*) calloc(initialCapacity, sizeof(_MapEntryStrToPairStrInt));
-    if (!map->data) {
-        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"MapStrToPairStrInt* MapStrToPairStrInt_Initialize(void)\"\n");
-        free(map);
-        return NULL;
-    }
-
     map->capacity = initialCapacity;
     map->size = 0;
     return map;
@@ -227,11 +185,6 @@ void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char
     if (map->size >= map->capacity) {
         size_t newCapacity = map->capacity * 2;
         _MapEntryStrToPairStrInt* newEntries = (_MapEntryStrToPairStrInt*) realloc(map->data, newCapacity * sizeof(_MapEntryStrToPairStrInt));
-        if (!newEntries) {
-            fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char* first, int second)\"\n");
-            return;
-        }
-
         map->data = newEntries;
         map->capacity = newCapacity;
     }
@@ -248,25 +201,13 @@ void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char
     map->data[map->size].key = strdup(key);
     map->data[map->size].value.first = strdup(first);
     map->data[map->size].value.second = second;
-
-    if (!map->data[map->size].key || !map->data[map->size].value.first) {
-        free(map->data[map->size].key);
-        free(map->data[map->size].value.first);
-        fprintf(stderr, "::: INTERNAL_ERROR: value assignment failed in \"void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char* first, int second)\"\n");
-        return;
-    }
-
     map->size ++;
 }
 
 /***** returns the string-integer pair corresponding to a given searchKey *****/
 PairStrInt* MapStrToPairStrInt_Find(MapStrToPairStrInt* map, const char* key) {
     size_t i;
-    for (i = 0; i < map->size; i ++) {
-        if (strcmp(map->data[i].key, key) == 0) {
-            return &map->data[i].value;
-        }
-    }
+    for (i = 0; i < map->size; i ++) if (strcmp(map->data[i].key, key) == 0) return &map->data[i].value;
     return NULL;
 }
 
@@ -292,16 +233,7 @@ MapStrToInt* MapStrToInt_Initialize(void) {
     size_t initialCapacity = 4;
 
     MapStrToInt* map = (MapStrToInt*) malloc(sizeof(MapStrToInt));
-    if (!map) {
-        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"MapStrToInt* MapStrToInt_Initialize(void)\"\n");
-        return NULL;
-    }
     map->data = (_MapEntryStrToInt*) malloc(initialCapacity * sizeof(_MapEntryStrToInt));
-    if (!map->data) {
-        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"MapStrToInt* MapStrToInt_Initialize(void)\"\n");
-        free(map);
-        return NULL;
-    }
     map->size = 0;
     map->capacity = initialCapacity;
     return map;
@@ -310,9 +242,7 @@ MapStrToInt* MapStrToInt_Initialize(void) {
 /***** frees allocated memory *****/
 void MapStrToInt_Clear(MapStrToInt* map) {
     size_t i;
-    for (i = 0; i < map->size; i ++) {
-        free(map->data[i].key);
-    }
+    for (i = 0; i < map->size; i ++) free(map->data[i].key);
     free(map->data);
     map->data = NULL;
     map->size = 0;
@@ -326,11 +256,6 @@ void MapStrToInt_Add(MapStrToInt* map, const char* key, int value) {
     if (map->size >= map->capacity) {
         size_t newCapacity = map->capacity * 2;
         _MapEntryStrToInt* newData = (_MapEntryStrToInt*) realloc(map->data, newCapacity * sizeof(_MapEntryStrToInt));
-        if (!newData) {
-            fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"void MapStrToInt_Add(MapStrToInt* map, const char* key, int value)\"\n");
-            MapStrToInt_Clear(map);
-            return;
-        }
         map->data = newData;
         map->capacity = newCapacity;
     }
@@ -343,11 +268,6 @@ void MapStrToInt_Add(MapStrToInt* map, const char* key, int value) {
     }
     
     map->data[map->size].key = strdup(key);
-    if (!map->data[map->size].key) {
-        fprintf(stderr, "::: INTERNAL_ERROR: memory allocation failed in \"void MapStrToInt_Add(MapStrToInt* map, const char* key, int value)\"\n");
-        MapStrToInt_Clear(map);
-        return;
-    }
     map->data[map->size].value = value;
     map->size ++;
 }
@@ -355,11 +275,7 @@ void MapStrToInt_Add(MapStrToInt* map, const char* key, int value) {
 /***** returns a pointer to the integer corresponding to a given searchKey *****/
 int* MapStrToInt_Find(MapStrToInt* map, const char* key) {
     size_t i;
-    for (i = 0; i < map->size; i ++) {
-        if (strcmp(map->data[i].key, key) == 0) {
-            return &map->data[i].value;
-        }
-    }
+    for (i = 0; i < map->size; i ++) if (strcmp(map->data[i].key, key) == 0) return &map->data[i].value;
     return NULL;
 }
 
@@ -390,18 +306,14 @@ void VectorListingCustom_Resize(VectorListingCustom* vector, size_t newCapacity)
 
     ListingCustom* newData;
 
-    if (newCapacity <= vector->capacity) {
-        return;
-    }
+    if (newCapacity <= vector->capacity) return;
 
     newData = (ListingCustom*) realloc(vector->data, sizeof(ListingCustom) * newCapacity);
-
     for (i = vector->capacity; i < newCapacity; i ++) {
         newData[i].label = strdup("");
         newData[i].mnemonic = strdup("");
         newData[i].operand = strdup("");
     }
-
     vector->data = newData;
     vector->capacity = newCapacity;
 }
@@ -411,31 +323,20 @@ void VectorListingCustom_Insert(VectorListingCustom* vector, const void* fieldVa
     
     if (index >= vector->size) {
         vector->size = index + 1;
-        if (vector->size > vector->capacity) {
-            VectorListingCustom_Resize(vector, vector->capacity * 2);
-        }
+        if (vector->size > vector->capacity) VectorListingCustom_Resize(vector, vector->capacity * 2);
     }
     
     if (strcmp(fieldName, "label") == 0) {
-        if (!strcmp(entry->label, "")) {
-            free(entry->label);
-        }
+        if (!strcmp(entry->label, "")) free(entry->label);
         entry->label = strdup((char*) fieldValue);
     } else if (strcmp(fieldName, "mnemonic") == 0) {
-        if (!strcmp(entry->mnemonic, "")) {
-            free(entry->mnemonic);
-        }
+        if (!strcmp(entry->mnemonic, "")) free(entry->mnemonic);
         entry->mnemonic = strdup((char*) fieldValue);
     } else if (strcmp(fieldName, "operand") == 0) {
-        if (!strcmp(entry->operand, "")) {
-            free(entry->operand);
-        }
+        if (!strcmp(entry->operand, "")) free(entry->operand);
         entry->operand = strdup((char*) fieldValue);
-    } else if (strcmp(fieldName, "operandType") == 0) {
-        entry->operandType = *(int*) fieldValue;
-    } else if (strcmp(fieldName, "isLabelPresent") == 0) {
-        entry->isLabelPresent = *(bool*) fieldValue;
-    }
+    } else if (strcmp(fieldName, "operandType") == 0) entry->operandType = *(int*) fieldValue;
+    else if (strcmp(fieldName, "isLabelPresent") == 0) entry->isLabelPresent = *(bool*) fieldValue;
 }
 
 /***** frees allocated memory *****/
