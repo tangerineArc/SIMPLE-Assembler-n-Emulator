@@ -483,7 +483,7 @@ void generateOutFiles(void) {
     size_t i;
 
     for (i = 0; i < machineCode->size; i ++) {
-        fprintf(listFilePtr, "%s %s %s\n", padWithZero(decimalToHexVA(programCounter.data[machineCode->data[i].first], 24), 6), machineCode->data[i].second, sourceCode->data[machineCode->data[i].first]);
+        fprintf(listFilePtr, "%s %s %s\n", padWithZero(decimalToHexVA(programCounter.data[machineCode->data[i].first], 24), 8), machineCode->data[i].second, sourceCode->data[machineCode->data[i].first]);
     }
     fclose(listFilePtr);
 
