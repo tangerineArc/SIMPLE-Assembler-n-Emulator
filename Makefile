@@ -14,4 +14,4 @@ emulator: emu.c
 	@echo ">>> by the grace of Swagatam 'emulate.exe' has been created in the current directory"
 clean:
 	@rm *.exe
-	@echo ">>> annihilated"
+	@echo ">>> by the wrath of Swagatam desired files have been annihilated from the current directory"
