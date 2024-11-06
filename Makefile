@@ -12,9 +12,6 @@ emulator: emu.c
 	@gcc -std=c89 -pedantic -W -Wall -Wpointer-arith -Wwrite-strings -Wstrict-prototypes -o emulate.exe emu.o dataStructures.o utils.o
 	@rm utils.o dataStructures.o emu.o
 	@echo ">>> by the grace of Swagatam 'emulate.exe' has been created in the current directory"
-clean-asm:
-	@rm assemble.exe
-	@echo ">>> annihilated 'assemble.exe'"
-clean-emu:
-	@rm emulate.exe
-	@echo ">>> annihilated 'emulate.exe'"
+clean:
+	@rm *.exe
+	@echo ">>> annihilated"

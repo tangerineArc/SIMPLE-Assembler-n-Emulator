@@ -13,8 +13,7 @@ int virtualMemory[1 << 24]; /* allocates memory for the emulator */
 int read_write[2]; /* stores a pair of read-write locations */
 
 int numInstructions = 0; /* total number instructions executed */
-int PC = 0; /* program counter */
-int A = 0, B = 0, SP = 0; /* register A, register B, stack-pointer */
+int A, B, PC, SP; /* register A, register B, program-counter, stack-pointer */
 
 const char* mnemonics[] = {
     "ldc", "adc", "ldl", "stl", "ldnl", "stnl", "add", "sub", "shl", "shr", "adj", "a2sp", "sp2a", "call", "return", "brz", "brlz", "br", "HALT"
@@ -87,7 +86,7 @@ void call(int offset) {
     PC += offset;
 }
 void return_(int value) {
-    PC = A + value;
+    PC = A;
     A = B;
     value *= 0; /* to prevent compilation warnings */
 }
@@ -177,11 +176,11 @@ void bdump(void) {
     printf(">>> memory dump before program execution\n\n");
     for (i = 0; i < machineCode.size; i += 4) {
         int j;
-        printf("\t--- %s ", decimalToHexVE(i));
+        printf("\t%s : ", decimalToHexVE(i));
         for (j = i; j < minOf2Ints(machineCode.size, i + 4); ++ j) printf("%s ", decimalToHexVE(machineCode.data[j]));
         printf("\n");
     }
-
+    printf("\n");
 }
 
 /*****************************************************************
@@ -192,51 +191,72 @@ void adump(void) {
     printf(">>> memory dump after program execution\n\n");
     for (i = 0; i < machineCode.size; i += 4) {
         int j;
-        printf("\t--- %s ", decimalToHexVE(i));
+        printf("\t%s : ", decimalToHexVE(i));
         for (j = i; j < minOf2Ints(machineCode.size, i + 4); ++ j) printf("%s ", decimalToHexVE(virtualMemory[j]));
         printf("\n");
     }
+    printf("\n");
 }
 
 /*********************************************************
     carry out instructions as per the specified option    
 *********************************************************/
 void runEmulator(char* flag) {
-    if (!strcmp(flag, "-trace") || !strcmp(flag, "-reads") || !strcmp(flag, "-writes") || !strcmp(flag, "-bdump") || !strcmp(flag, "-adump")) {
-        while ((size_t) PC < machineCode.size) {
-            int curr = machineCode.data[PC ++];
-            int opCode = curr & 0xff;
-            int value = (curr - opCode) >> 8;
-            
-            numInstructions ++;
+    A = 0;
+    B = 0;
+    PC = 0;
+    SP = sizeof(virtualMemory) / sizeof(virtualMemory[0]) - 1;
+    
+    if (!strcmp(flag, "-bdump")) {
+        bdump();
+        return;
+    }
 
-            operations[opCode](value);
+    while ((size_t) PC < machineCode.size) {
+        int old_pc = PC;
 
-            if (PC < 0 || (size_t) PC > machineCode.size || numInstructions > (1 << 24)) {
-                printf("::: ERROR: segmentation fault: exceeded virtual-memory limit\n");
-                break;
-            }
+        int curr = machineCode.data[PC];
+        int opCode = curr & 0xff;
+        int value = (curr - opCode) >> 8;
 
-            if (!strcmp(flag, "-trace")) {
-                printf("PC = %08x, SP = %08x, A = %08x, B = %08x ", PC, SP, A, B);
-                printf("%s ", mnemonics[opCode]);
-                if (MapStrToPairStrInt_Find(instructionSet, mnemonics[opCode])->second > 0) printf("%s", decimalToHexVE(value));
-                printf("\n");
-            } else if (!strcmp(flag, "-reads") && (opCode == 2 || opCode == 4)) {
-                printf(">>> reading from location [%s] --- value [%s]\n", decimalToHexVE(read_write[0]), decimalToHexVE(A));
-            } else if (!strcmp(flag, "-writes") && (opCode == 3 || opCode == 5)) {
-                printf(">>> writing to location [%s] --- changed value from [%s] to [%s]\n", decimalToHexVE(read_write[0]), decimalToHexVE(read_write[1]), decimalToHexVE(virtualMemory[read_write[0]]));
-            }
-
-            if (opCode >= 18) break;
+        if (opCode > 18 || opCode < 0) {
+            fprintf(stdout, "::: reached end of program without HALT\n");
+            break;
         }
 
-        if (!strcmp(flag, "-trace")) printf("\n>>> program execution finished\n");
-        else if (!strcmp(flag, "-bdump")) bdump();
-        else if (!strcmp(flag, "-adump")) adump();
-    } else if (!strcmp(flag, "-wipe")) A = B = SP = PC = 0;
+        operations[opCode](value);
 
-    printf("\n>>> %d instructions executed\n\n", numInstructions);
+        PC ++;
+        
+        if (PC < 0 || (size_t) PC > machineCode.size || numInstructions > (1 << 24)) {
+            fprintf(stderr, "::: ERROR: segmentation fault: exceeded virtual-memory limit\n");
+            break;
+        }
+        if (PC == old_pc) {
+            fprintf(stderr, "::: ERROR: encountered infinite loop\n");
+            break;
+        }
+
+        numInstructions ++;
+
+        if (!strcmp(flag, "-trace")) {
+            printf(">>> PC = %08x, SP = %08x, A = %08x, B = %08x ", PC, SP, A, B);
+            printf("%s ", mnemonics[opCode]);
+            if (MapStrToPairStrInt_Find(instructionSet, mnemonics[opCode])->second > 0) printf("%s", decimalToHexVE(value));
+            printf("\n");
+        } else if (!strcmp(flag, "-reads") && (opCode == 2 || opCode == 4)) {
+            printf(">>> reading from location [%s] --- value [%s]\n", decimalToHexVE(read_write[0]), decimalToHexVE(A));
+        } else if (!strcmp(flag, "-writes") && (opCode == 3 || opCode == 5)) {
+            printf(">>> writing to location [%s] --- changed value from [%s] to [%s]\n", decimalToHexVE(read_write[0]), decimalToHexVE(read_write[1]), decimalToHexVE(virtualMemory[read_write[0]]));
+        }
+        
+        if (opCode >= 18) break;
+    }
+    
+    if (!strcmp(flag, "-trace")) printf("\n>>> program execution finished\n");
+    else if (!strcmp(flag, "-adump")) adump();
+
+    printf(">>> %d instructions executed\n\n", numInstructions);
 }
 
 int main(int argc, char* argv[]) {
@@ -257,7 +277,6 @@ int main(int argc, char* argv[]) {
         printf("\t-writes  show memory writes\n");
         printf("\t-bdump   show memory dump before execution\n");
         printf("\t-adump   show memory dump after execution\n");
-        printf("\t-wipe    wipe written flags before execution\n");
         printf("\t-isa     show instruction set\n");
         printf("\t-man     show emulator manual\n");
         printf("\n--------------------- EMULATOR MANUAL ENDS ---------------------\n\n");
@@ -290,7 +309,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    if (!strcmp(argv[1], "-trace") || !strcmp(argv[1], "-reads") || !strcmp(argv[1], "-writes") || !strcmp(argv[1], "-bdump") || !strcmp(argv[1], "-adump") || !strcmp(argv[1], "-wipe")) {
+    if (!strcmp(argv[1], "-trace") || !strcmp(argv[1], "-reads") || !strcmp(argv[1], "-writes") || !strcmp(argv[1], "-bdump") || !strcmp(argv[1], "-adump")) {
         if (argc == 2) {
             fprintf(stderr, "\n::: EMULATOR_ERROR: expected a file-path after \"%s\"\n\n", argv[1]);
             exit(-1);
