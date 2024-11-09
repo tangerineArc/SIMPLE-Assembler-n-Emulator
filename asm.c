@@ -1,3 +1,11 @@
+/*********************************************************************
+------------------- DECLARATION OF AUTHORSHIP ------------------------
+I hereby declare that the source-code presented herein is my own work.
+    --- Author Name: SWAGATAM PATI
+    --- Roll No.: 2301AI28
+----------------------------------------------------------------------
+*********************************************************************/
+
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -194,7 +202,7 @@ void translatePseudoInstructions(void) {
             if (sourceCode->data[i][j] == ':') {
                 if (strlen(token) > 0) token[strlen(token) - 1] = '\0';
 
-                if (strlen(sourceCode->data[i]) > j + 5 && !strcmp(substr(sourceCode->data[i], j + 2, 3), "SET")) {
+                if (strlen(sourceCode->data[i]) > j + 5 && !strcmp(substr_(sourceCode->data[i], j + 2, 3), "SET")) {
                     state = true;
 
                     if (abs(*MapStrToInt_Find(labels, token)) == i) {
@@ -202,7 +210,7 @@ void translatePseudoInstructions(void) {
 
                         MapStrToInt_Add(labels, token, realInstructionsSourceCode->size - 1);
 
-                        sprintf(info, "%s data %s", substr(sourceCode->data[i], 0, j + 1), substr(sourceCode->data[i], j + 6, strlen(sourceCode->data[i]) - (j + 6)));
+                        sprintf(info, "%s data %s", substr_(sourceCode->data[i], 0, j + 1), substr_(sourceCode->data[i], j + 6, strlen(sourceCode->data[i]) - (j + 6)));
                         VectorStr_Push(realInstructionsSourceCode, info);
                         free(info);
                     } else {
@@ -219,11 +227,11 @@ void translatePseudoInstructions(void) {
                         VectorStr_Push(realInstructionsSourceCode, "stl -1");
                         VectorStr_Push(realInstructionsSourceCode, "stl 0");
                         
-                        sprintf(_t1, "ldc %s", substr(sourceCode->data[i], j + 6, strlen(sourceCode->data[i]) - (j + 6)));
+                        sprintf(_t1, "ldc %s", substr_(sourceCode->data[i], j + 6, strlen(sourceCode->data[i]) - (j + 6)));
                         VectorStr_Push(realInstructionsSourceCode, _t1);
                         free(_t1);
 
-                        sprintf(_t2, "ldc %s", substr(token, 0, j));
+                        sprintf(_t2, "ldc %s", substr_(token, 0, j));
                         VectorStr_Push(realInstructionsSourceCode, _t2);
                         free(_t2);
 
@@ -258,12 +266,12 @@ void separateDataFromInstructions(void) {
 
         unsigned int j;
         for (j = 0; j < length; j ++) {
-            if (!strcmp(substr(sourceCode->data[i], j, 4), "data") && j + 4 < length) {
+            if (!strcmp(substr_(sourceCode->data[i], j, 4), "data") && j + 4 < length) {
                 VectorStr_Push(dataSegments, sourceCode->data[i]);
                 state = true;
                 break;
             }
-            if (sourceCode->data[i][length - 1] == ':' && i + 1 < sourceCode->size && !strcmp(substr(sourceCode->data[i + 1], 0, 4), "data")) {
+            if (sourceCode->data[i][length - 1] == ':' && i + 1 < sourceCode->size && !strcmp(substr_(sourceCode->data[i + 1], 0, 4), "data")) {
                 VectorStr_Push(dataSegments, sourceCode->data[i]);
                 state = true;
                 break;
@@ -285,9 +293,9 @@ int getOperandType(char* operand) {
     if (strlen(operand) == 0) return 0;
 
     if (operand[0] == '+' || operand[0] == '-') {
-        strrev(operand);
+        strrev_(operand);
         operand[strlen(operand) - 1] = '\0';
-        strrev(operand);
+        strrev_(operand);
     }
 
     if (strlen(operand) == 0) return -1;
@@ -376,7 +384,7 @@ void tabulateSourceCode(void) {
         }
         
         if (minOf2Ints(MapStrToPairStrInt_Find(instructionSet, row->data[1])->second, 1) != ptr - 2) {
-            raiseError(i + 1, "invalid OPCode-syntax combination");
+            raiseError(i + 1, "invalid combination");
 
             VectorStr_Clear(row);
             free(curr);
@@ -390,7 +398,7 @@ void tabulateSourceCode(void) {
         VectorListingCustom_Insert(&sourceTable, &opType, i, "operandType");
 
         if (sourceTable.data[i].operandType == 1 && MapStrToInt_Find(labels, sourceTable.data[i].operand) == NULL) raiseError(i + 1, "no such label");
-        else if (sourceTable.data[i].operandType == -1) raiseError(i + 1, "invalid number");
+        else if (sourceTable.data[i].operandType == -1) raiseError(i + 1, "invalid operand");
 
         free(curr);
         VectorStr_Clear(row);
@@ -414,7 +422,7 @@ void executePass1(char* sourceFilePath) {
     
     errors = VectorPairIntStr_Initialize();
     
-    while ((line = readLine(sourceFile)) != NULL) {
+    while ((line = readLine_(sourceFile)) != NULL) {
         char* trimmedLine = trim(line, sourceCode->size);
         VectorStr_Push(sourceCode, trimmedLine);
         

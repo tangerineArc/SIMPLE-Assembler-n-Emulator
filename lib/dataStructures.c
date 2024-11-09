@@ -1,3 +1,11 @@
+/*********************************************************************
+------------------- DECLARATION OF AUTHORSHIP ------------------------
+I hereby declare that the source-code presented herein is my own work.
+    --- Author Name: SWAGATAM PATI
+    --- Roll No.: 2301AI28
+----------------------------------------------------------------------
+*********************************************************************/
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,7 +77,7 @@ void VectorStr_Push(VectorStr* vector, const char* string) {
         vector->data = (char**) realloc(vector->data, vector->capacity * sizeof(char*));
     }
     
-    vector->data[vector->size] = strdup(string);
+    vector->data[vector->size] = strdup_(string);
     vector->size ++;
 }
 
@@ -82,7 +90,7 @@ void VectorStr_Resize(VectorStr* vector, int newSize) {
         vector->data = (char**) realloc(vector->data, vector->capacity * sizeof(char*));
     }
 
-    for (i = vector->size; i < newSize; i ++) vector->data[i] = strdup("");
+    for (i = vector->size; i < newSize; i ++) vector->data[i] = strdup_("");
 
     if (newSize < vector->size) {
         int i;
@@ -97,7 +105,7 @@ void VectorStr_Insert(VectorStr* vector, int index, const char* string) {
     if (index >= vector->size) VectorStr_Resize(vector, index + 1);
 
     if (vector->data[index] != NULL) free(vector->data[index]);
-    vector->data[index] = strdup(string);
+    vector->data[index] = strdup_(string);
 }
 
 /***** frees allocated memory *****/
@@ -146,7 +154,7 @@ void _VectorPairIntStr_Resize(VectorPairIntStr* vector) {
 void VectorPairIntStr_Push(VectorPairIntStr* vector, int first, const char* second) {
     if (vector->size >= vector->capacity) _VectorPairIntStr_Resize(vector);
     vector->data[vector->size].first = first;
-    vector->data[vector->size].second = strdup(second);
+    vector->data[vector->size].second = strdup_(second);
     vector->size ++;
 }
 
@@ -192,14 +200,14 @@ void MapStrToPairStrInt_Add(MapStrToPairStrInt* map, const char* key, const char
     for (i = 0; i < map->size; i ++) {
         if (strcmp(map->data[i].key, key) == 0) {
             free(map->data[i].value.first);
-            map->data[i].value.first = strdup(first);
+            map->data[i].value.first = strdup_(first);
             map->data[i].value.second = second;
             return;
         }
     }
     
-    map->data[map->size].key = strdup(key);
-    map->data[map->size].value.first = strdup(first);
+    map->data[map->size].key = strdup_(key);
+    map->data[map->size].value.first = strdup_(first);
     map->data[map->size].value.second = second;
     map->size ++;
 }
@@ -267,7 +275,7 @@ void MapStrToInt_Add(MapStrToInt* map, const char* key, int value) {
         }
     }
     
-    map->data[map->size].key = strdup(key);
+    map->data[map->size].key = strdup_(key);
     map->data[map->size].value = value;
     map->size ++;
 }
@@ -294,9 +302,9 @@ void VectorListingCustom_Initialize(VectorListingCustom* vector) {
     vector->data = (ListingCustom*) malloc(sizeof(ListingCustom) * initialCapacity);
 
     for (i = 0; i < vector->capacity; i ++) {
-        vector->data[i].label = strdup("");
-        vector->data[i].mnemonic = strdup("");
-        vector->data[i].operand = strdup("");
+        vector->data[i].label = strdup_("");
+        vector->data[i].mnemonic = strdup_("");
+        vector->data[i].operand = strdup_("");
     }
 }
 
@@ -310,9 +318,9 @@ void VectorListingCustom_Resize(VectorListingCustom* vector, size_t newCapacity)
 
     newData = (ListingCustom*) realloc(vector->data, sizeof(ListingCustom) * newCapacity);
     for (i = vector->capacity; i < newCapacity; i ++) {
-        newData[i].label = strdup("");
-        newData[i].mnemonic = strdup("");
-        newData[i].operand = strdup("");
+        newData[i].label = strdup_("");
+        newData[i].mnemonic = strdup_("");
+        newData[i].operand = strdup_("");
     }
     vector->data = newData;
     vector->capacity = newCapacity;
@@ -328,13 +336,13 @@ void VectorListingCustom_Insert(VectorListingCustom* vector, const void* fieldVa
     
     if (strcmp(fieldName, "label") == 0) {
         if (!strcmp(entry->label, "")) free(entry->label);
-        entry->label = strdup((char*) fieldValue);
+        entry->label = strdup_((char*) fieldValue);
     } else if (strcmp(fieldName, "mnemonic") == 0) {
         if (!strcmp(entry->mnemonic, "")) free(entry->mnemonic);
-        entry->mnemonic = strdup((char*) fieldValue);
+        entry->mnemonic = strdup_((char*) fieldValue);
     } else if (strcmp(fieldName, "operand") == 0) {
         if (!strcmp(entry->operand, "")) free(entry->operand);
-        entry->operand = strdup((char*) fieldValue);
+        entry->operand = strdup_((char*) fieldValue);
     } else if (strcmp(fieldName, "operandType") == 0) entry->operandType = *(int*) fieldValue;
     else if (strcmp(fieldName, "isLabelPresent") == 0) entry->isLabelPresent = *(bool*) fieldValue;
 }

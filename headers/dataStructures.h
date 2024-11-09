@@ -1,3 +1,11 @@
+/*********************************************************************
+------------------- DECLARATION OF AUTHORSHIP ------------------------
+I hereby declare that the source-code presented herein is my own work.
+    --- Author Name: SWAGATAM PATI
+    --- Roll No.: 2301AI28
+----------------------------------------------------------------------
+*********************************************************************/
+
 #ifndef DATA_STRUCTURES_H
 #define DATA_STRUCTURES_H
 

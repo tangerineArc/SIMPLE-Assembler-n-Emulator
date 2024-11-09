@@ -1,5 +1,4 @@
 *.exe
-*.asm
 .vscode
 *.o
 *.lst

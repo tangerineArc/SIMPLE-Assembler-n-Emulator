@@ -1,14 +1,22 @@
+/*********************************************************************
+------------------- DECLARATION OF AUTHORSHIP ------------------------
+I hereby declare that the source-code presented herein is my own work.
+    --- Author Name: SWAGATAM PATI
+    --- Roll No.: 2301AI28
+----------------------------------------------------------------------
+*********************************************************************/
+
 #ifndef UTILS_H
 #define UTILS_H
 
 #include <stdio.h>
 #include <stdbool.h>
 
-char* readLine(FILE* filePtr); /* reads a line from a file and returns it */
+char* readLine_(FILE* filePtr); /* reads a line from a file and returns it */
 
-char* strdup(const char *str); /* duplicates a string and returns it */
-void strrev(char* str); /* reverses a string in-place */
-char* substr(const char* string, int start, int length); /* returns a slice of a string */
+char* strdup_(const char *str); /* duplicates a string and returns it */
+void strrev_(char* str); /* reverses a string in-place */
+char* substr_(const char* string, int start, int length); /* returns a slice of a string */
 
 int minOf2Ints(int a, int b); /* returns the minimum of two integers */
 

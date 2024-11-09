@@ -1,3 +1,11 @@
+/*********************************************************************
+------------------- DECLARATION OF AUTHORSHIP ------------------------
+I hereby declare that the source-code presented herein is my own work.
+    --- Author Name: SWAGATAM PATI
+    --- Roll No.: 2301AI28
+----------------------------------------------------------------------
+*********************************************************************/
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -7,7 +15,7 @@
 /**********************************************
     reads a line from a file and returns it    
 **********************************************/
-char* readLine(FILE* filePtr) {
+char* readLine_(FILE* filePtr) {
     size_t len = 0;
     size_t capacity = 128;
 
@@ -37,7 +45,7 @@ char* readLine(FILE* filePtr) {
 /*****************************************
     duplicates a string and returns it    
 *****************************************/
-char* strdup(const char *str) {
+char* strdup_(const char *str) {
     char* dup = malloc(strlen(str) + 1);
     if (dup == NULL) return NULL;
     strcpy(dup, str);
@@ -47,7 +55,7 @@ char* strdup(const char *str) {
 /*********************************
     reverses a string in-place    
 *********************************/
-void strrev(char* str) {
+void strrev_(char* str) {
     int i = 0;
     int j = strlen(str) - 1;
     while (i < j) {
@@ -61,7 +69,7 @@ void strrev(char* str) {
 /**********************************
     returns a slice of a string    
 **********************************/
-char* substr(const char* string, int start, int length) {
+char* substr_(const char* string, int start, int length) {
     char* substring = malloc(length + 1);
 
     strncpy(substring, string + start, length);
@@ -125,15 +133,15 @@ const char* padWithZero(char* numStr, int size) { /* default size = 6 */
 
     unsigned int i;
 
-    strrev(numStr);
+    strrev_(numStr);
 
     for (i = 0; i < strlen(numStr); i ++) paddedNumStr[i] = numStr[i];
     paddedNumStr[strlen(numStr)] = '\0';
 
     while (strlen(paddedNumStr) < (unsigned) size) strcat(paddedNumStr, "0");
 
-    strrev(numStr);
-    strrev(paddedNumStr);
+    strrev_(numStr);
+    strrev_(paddedNumStr);
     return paddedNumStr;
 }
 

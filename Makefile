@@ -1,3 +1,11 @@
+# /*********************************************************************
+# ------------------- DECLARATION OF AUTHORSHIP ------------------------
+# I hereby declare that the source-code presented herein is my own work.
+#    --- Author Name: SWAGATAM PATI
+#    --- Roll No.: 2301AI28
+# ----------------------------------------------------------------------
+# *********************************************************************/
+
 assembler: asm.c
 	@gcc -std=c89 -pedantic -W -Wall -Wpointer-arith -Wwrite-strings -Wstrict-prototypes -c -o utils.o ./lib/utils.c
 	@gcc -std=c89 -pedantic -W -Wall -Wpointer-arith -Wwrite-strings -Wstrict-prototypes -c -o dataStructures.o ./lib/dataStructures.c

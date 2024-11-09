@@ -1,0 +1,51 @@
+/*********************************************************************
+------------------- DECLARATION OF AUTHORSHIP ------------------------
+I hereby declare that the source-code presented herein is my own work.
+    --- Author Name: SWAGATAM PATI
+    --- Roll No.: 2301AI28
+----------------------------------------------------------------------
+*********************************************************************/
+
+-----------------------------------
+ Compilation & Usage Instructions: 
+-----------------------------------
+    NOTE: if your system (particularly Windows and macOS) does not have `make` installed, install `make` first before proceeding.
+
+    To compile asm.c:   make assembler
+    On compliation, `assemble.exe` would be created.
+    
+    To assemble an assembly program:    ./assemble.exe file-path.asm
+    
+    To complie emu.c:   make emulator
+    On compilation, `emulate.exe` would be created.
+
+    To execute an assembled program:    ./emulate.exe -option binary-file-path.out
+    For help:   ./emulate.exe -man
+
+---------------------------------
+ Claims for the Assembler: asm.c 
+---------------------------------
+    - source-code follows the ANSI C standard and compiles without any warnings or errors (Makefile provided)
+    - the assembler, in its first-pass, parses the source-code and reads into an internal form and is then processed upon during the second-pass
+    - produces the assembled binary-file 'machine-code.out' containing machine-code if no errors are encountered
+    - correctly diagnoses errors (including label errors), if any, in the assembly program
+    - issues warnings as appropriate
+    - produces a human-readable listing file named 'listing.lst' showing what value is stored at each address; also shows the mnemonic and operand that each instruction corresponds to; also shows labels as appropriate
+    - has an internal table-like data-structure of instrction names, opcodes and expected operands
+    - assembles the provided sample test-programs as intended
+    - assembles additional test-programs (for both failure and success); brief explanation as comments have been included in each test-file
+    - implements and demonstrates the pseudo-instruction SET; correctly assembles sample-test2.asm
+
+    Bubble sort program:
+    - the assembler assembles the bubble-sort.asm program as intended
+    - the bubble-sort program works as intended
+
+--------------------------------
+ Claims for the Emulator: emu.c 
+--------------------------------
+    - source-code follows the ANSI C standard and compiles without any warnings or errors (Makefile provided)
+    - loads the object-file without errors
+    - produces memory dump after (and before execution) using option -adump (and -bdump)
+    - executes the test-program as intended
+    - detects errant-programs; e.g. infinite loop, invalid memory access
+    - does not fail when HALT is not present
