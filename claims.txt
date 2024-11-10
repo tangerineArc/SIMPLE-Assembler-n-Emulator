@@ -4,6 +4,8 @@ I hereby declare that the claims made herein are true.
     --- Roll No.: 2301AI28
 ------------------------------------------------------
 
+The project repository can be found at: https://github.com/tangerineArc/Simple-Assembler-n-Emulator.git
+
 -----------------------------------
  Compilation & Usage Instructions: 
 -----------------------------------
@@ -30,7 +32,7 @@ I hereby declare that the claims made herein are true.
     - has an internal table-like data-structure of instrcution names, opcodes and expected operands
     - assembles the provided sample test-programs as intended
     - assembles additional test-programs (for both failure and success); brief explanation as comments have been included in each test-file
-    - implements and demonstrates the pseudo-instruction SET; correctly assembles sample-test2.asm
+    - implements and demonstrates the pseudo-instruction SET; correctly assembles ./sampleTests/sample-test2.asm
 
     Bubble sort program:
     - the assembler assembles the 'bubble-sort.asm' program as intended
@@ -41,7 +43,23 @@ I hereby declare that the claims made herein are true.
 --------------------------------
     - source-code follows the ANSI C standard and compiles without any warnings or errors (Makefile provided)
     - loads the object-file without errors
+    - displays manual with -man flag, instruction-set with -isa flag
+    - shows program execution trace with -trace flag
     - produces memory dump after (and before) execution using option -adump (and -bdump)
     - executes the test-program as intended
     - detects errant-programs; e.g. infinite loop, invalid memory access
     - does not fail when HALT is not present
+
+-------------------------------------------------------
+ Evidence showing proper functioning of the Assembler: 
+-------------------------------------------------------
+    - standard-output logs (*.log), object files (*.o), listings (*.lst) for the provided sample-tests are included in the directory: ./sampleTests/
+    - standard-output log (.log), object file (.o), listing (.lst) for the bubble-sort program are included in the directory: ./bubbleSort/
+    - standard-output logs (*.log), object files (*.o), listings (*.lst) for additional tests are included in the directory: ./additionalTests/
+
+------------------------------------------------------
+ Evidence showing proper functioning of the Emulator: 
+------------------------------------------------------
+    - check out the emulator yourself by running the object-programs present in ./additionalTests, ./bubbleSort, ./sampleTests directories
+        - ./emulator.exe -trace ./directory-name/file-name.out
+        - 'adump' and 'bdump' provide a good way to check for correctness of output: ./emulator.exe -adump ./directory-name/file-name.out

@@ -1,0 +1,12 @@
+>>> loaded "./sampleTests/sample-test3.asm"
+>>> parsed "./sampleTests/sample-test3.asm"
+
+-------------------- ASSEMBLER LOG STARTS --------------------
+
+>>> SUCCESS: assembly completed for "./sampleTests/sample-test3.asm"
+>>> WARNING: HALT not present
+>>> 0 errors encountered
+>>> generated listing file "listing.lst" in current directory
+>>> generated binary file "machine-code.out" in current directory
+
+--------------------- ASSEMBLER LOG ENDS ---------------------

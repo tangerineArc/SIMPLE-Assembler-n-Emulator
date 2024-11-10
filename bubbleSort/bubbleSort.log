@@ -1,0 +1,11 @@
+>>> loaded "./bubbleSort/bubbleSort.asm"
+>>> parsed "./bubbleSort/bubbleSort.asm"
+
+-------------------- ASSEMBLER LOG STARTS --------------------
+
+>>> SUCCESS: assembly completed for "./bubbleSort/bubbleSort.asm"
+>>> 0 errors encountered
+>>> generated listing file "listing.lst" in current directory
+>>> generated binary file "machine-code.out" in current directory
+
+--------------------- ASSEMBLER LOG ENDS ---------------------

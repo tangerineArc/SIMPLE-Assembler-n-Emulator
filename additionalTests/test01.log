@@ -1,0 +1,12 @@
+>>> loaded "./additionalTests/test01.asm"
+>>> parsed "./additionalTests/test01.asm"
+
+-------------------- ASSEMBLER LOG STARTS --------------------
+
+>>> SUCCESS: assembly completed for "./additionalTests/test01.asm"
+>>> 0 errors encountered
+>>> generated listing file "listing.lst" in current directory
+>>> generated binary file "machine-code.out" in current directory
+
+--------------------- ASSEMBLER LOG ENDS ---------------------
+

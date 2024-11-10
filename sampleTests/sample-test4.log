@@ -1,0 +1,11 @@
+>>> loaded "./sampleTests/sample-test4.asm"
+>>> parsed "./sampleTests/sample-test4.asm"
+
+-------------------- ASSEMBLER LOG STARTS --------------------
+
+>>> SUCCESS: assembly completed for "./sampleTests/sample-test4.asm"
+>>> 0 errors encountered
+>>> generated listing file "listing.lst" in current directory
+>>> generated binary file "machine-code.out" in current directory
+
+--------------------- ASSEMBLER LOG ENDS ---------------------

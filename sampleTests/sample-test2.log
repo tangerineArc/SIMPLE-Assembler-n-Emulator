@@ -1,0 +1,18 @@
+>>> loaded "./sampleTests/sample-test2.asm"
+>>> parsed "./sampleTests/sample-test2.asm"
+
+-------------------- ASSEMBLER LOG STARTS --------------------
+
+>>> FAILURE: assembly terminated for "./sampleTests/sample-test2.asm"
+>>> 9 errors encountered
+        ::: ERROR on line 4: multiple declarations found for label: label
+        ::: ERROR on line 5: no such label
+        ::: ERROR on line 6: invalid operand
+        ::: ERROR on line 7: invalid combination
+        ::: ERROR on line 8: invalid combination
+        ::: ERROR on line 9: invalid combination
+        ::: ERROR on line 10: invalid label identifier
+        ::: ERROR on line 11: invalid mnemonic
+        ::: ERROR on line 12: invalid mnemonic
+
+--------------------- ASSEMBLER LOG ENDS ---------------------

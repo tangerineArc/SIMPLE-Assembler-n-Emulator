@@ -1,0 +1,15 @@
+>>> loaded "./additionalTests/test02.asm"
+>>> parsed "./additionalTests/test02.asm"
+
+-------------------- ASSEMBLER LOG STARTS --------------------
+
+>>> FAILURE: assembly terminated for "./additionalTests/test02.asm"
+>>> 6 errors encountered
+        ::: ERROR on line 11: invalid mnemonic
+        ::: ERROR on line 12: invalid combination
+        ::: ERROR on line 13: invalid operand
+        ::: ERROR on line 14: invalid combination
+        ::: ERROR on line 16: multiple declarations found for label: loop
+        ::: ERROR on line 17: invalid label identifier
+
+--------------------- ASSEMBLER LOG ENDS ---------------------
