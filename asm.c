@@ -222,23 +222,17 @@ void translatePseudoInstructions(void) {
                             free(_t2);
                             break;
                         }
-
-                        VectorStr_Push(realInstructionsSourceCode, "adj 10000");
-                        VectorStr_Push(realInstructionsSourceCode, "stl -1");
-                        VectorStr_Push(realInstructionsSourceCode, "stl 0");
                         
+                        VectorStr_Push(realInstructionsSourceCode, "a2sp");
                         sprintf(_t1, "ldc %s", substr_(sourceCode->data[i], j + 6, strlen(sourceCode->data[i]) - (j + 6)));
                         VectorStr_Push(realInstructionsSourceCode, _t1);
-                        free(_t1);
-
-                        sprintf(_t2, "ldc %s", substr_(token, 0, j));
+                        sprintf(_t2, "ldc %s", token);
                         VectorStr_Push(realInstructionsSourceCode, _t2);
-                        free(_t2);
-
                         VectorStr_Push(realInstructionsSourceCode, "stnl 0");
-                        VectorStr_Push(realInstructionsSourceCode, "ldl 0");
-                        VectorStr_Push(realInstructionsSourceCode, "ldl -1");
-                        VectorStr_Push(realInstructionsSourceCode, "adj -1000");
+                        VectorStr_Push(realInstructionsSourceCode, "sp2a");
+
+                        free(_t1);
+                        free(_t2);
                     }
                     break;
                 }
