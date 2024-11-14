@@ -51,7 +51,7 @@ Below is a list of all the files and directories that the project contains:
 - `/sampleTests` - contains provided sample programs, console outputs as log-files, listings, object-files
 - `/additionalTests` - contains additional assembly programs, console output as log-files, listings, object-files
 
-# Assembly Language
+## Assembly Language
 The assembly language is for a machine with four registers:
 - Two registers: **A** & **B**, arranged as an internal stack
 - A program counter: **PC**
@@ -76,7 +76,7 @@ A label use is just the label name. A valid label name is an alphanumeric string
 For branch instructions label use should calculate the branch displacement.  
 For non-branch instructions, the label value should be used directly.
 
-# SIMPLE Instruction Set
+## SIMPLE Instruction Set
 The instruction semantics do not show the incrementing of the **PC** to the next instruction.  
 This is implicitly performed by each instruction before the actions of the instruction are done. 
 
